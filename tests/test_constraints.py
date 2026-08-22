@@ -19,6 +19,9 @@ import numpy as np
 import pytest
 
 _LEFT, _DOWN, _UP, _RIGHT = range(4)
+_PANEL_INDEX = {'L': _LEFT, 'D': _DOWN, 'U': _UP, 'R': _RIGHT}
+_NO_RUN = 10.0
+"""A gap far too wide for the notes either side of it to be a run."""
 _ROOMY = 10.0
 """A gap long enough that no timing rule bites."""
 
@@ -237,3 +240,73 @@ def test_only_the_emptiest_measures_are_rested() -> None:
     busy = [measure * MEASURE_SLOTS + slot for measure in range(20) for slot in (0, 12, 24, 36)]
     thin = [21 * MEASURE_SLOTS]
     assert thin_measures([*busy, *thin]) == {21}
+
+
+def _stream(panels: str, gap: float, seconds_per_slot: float, share: float = 1.0) -> list[bool]:
+    """
+    Walk a run of single notes through a budget.
+
+    Reports whether each step would have been barred as a crossover. The
+    opening note starts the run rather than joining one, as it does when a
+    chart is decoded, and the share defaults high so that the cap on
+    consecutive crossings is what the result reflects.
+    """
+    budget = Budget()
+    barred = []
+    for index, name in enumerate(panels.split()):
+        landed = _PANEL_INDEX[name]
+        in_run = budget.enter_run(gap if index else _NO_RUN, seconds_per_slot)
+        barred.append(landed in budget.crossed(share) | budget.overrun(share))
+        codes = [0, 0, 0, 0]
+        codes[landed] = 1
+        budget.record(frozenset({landed}), codes, in_run=in_run)
+    return barred
+
+
+def test_a_sixteenth_stream_never_crosses_twice_running() -> None:
+    # Up then down leaves the left foot due, so landing on right crosses, and
+    # left on the right foot straight after would cross again. At a sixteenth
+    # there is no time to recover between them, so the second one is barred.
+    sixteenth = 0.1
+    barred = _stream('U D R L R L', sixteenth, sixteenth / 3.0)
+    assert barred[2] is False
+    assert barred[3] is True
+
+
+def test_an_eighth_run_may_cross_twice_but_not_three_times() -> None:
+    # Slower crossovers read as a flourish rather than a scramble, and the
+    # corpus writes two in a row for 14 per cent of its crossed stretches.
+    eighth = 0.15
+    barred = _stream('U D R L R L', eighth, eighth / 12.0)
+    assert barred[2] is False
+    assert barred[3] is False
+    assert barred[4] is True
+
+
+def test_the_crossover_budget_applies_to_a_keyboard_too() -> None:
+    # A keyboard has no legs to cross, but the shape is as awkward under four
+    # fingers, and the rule used to be skipped for it entirely.
+    budget = Budget()
+    assert budget.enter_run(0.05, 0.02) is True
+
+
+def test_a_gap_too_wide_to_be_a_run_is_not_one() -> None:
+    assert Budget().enter_run(1.0, 0.02) is False
+
+
+def test_nothing_is_barred_while_budget_remains() -> None:
+    budget = Budget()
+    assert budget.crossed(0.5) == frozenset()
+    assert budget.overrun(0.5) == frozenset()
+
+
+def test_an_allowance_of_zero_bars_crossing_from_the_very_first_step() -> None:
+    # Rationing by share always lets the first one through, since no share of
+    # nothing has been spent yet. Asking for none has to mean none.
+    barred = _stream('U D R L', 0.1, 0.1 / 3.0, share=0.0)
+    assert barred[2] is True
+
+
+def test_an_allowance_of_zero_bars_crossing_at_eighth_speed_too() -> None:
+    barred = _stream('U D R L', 0.15, 0.15 / 12.0, share=0.0)
+    assert barred[2] is True

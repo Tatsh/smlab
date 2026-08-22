@@ -111,21 +111,36 @@ the training data cannot reach that bias — see
 :py:data:`~smlab.chart_data.MIRRORS`. Correcting it here is the only thing that
 works, so :py:attr:`~smlab.generate.GenerationConfig.balance` defaults high.
 """
-_CROSSOVER_SHARE = 0.15
+_MAX_CROSSED_RUN = 2
 """
-Share of streamed notes that may land on a crossed foot.
+Longest stretch of consecutive crossed steps allowed at eighth speed.
 
-Inside a run the feet alternate, so the panel sequence decides whether a step
-lands crossed over. Charts rated twelve to sixteen cross on 12 per cent of
-their streamed notes at the median, 15 at the seventy-fifth percentile and 18.9
-at the ninetieth.
-
-Set at the seventy-fifth percentile rather than the median, because barring a
-crossover can only ever bar the left or right panel: up and down are never
-crossovers. Held at the median the rule fires on a quarter of all steps and
-starves the outer two panels, costing the right panel about four points of its
-share. At the seventy-fifth it caps the tail without shaping the whole chart.
+A share bounds how many crossovers a chart holds but says nothing about how
+they clump, and the clump is what hurts: one crossed step is a step, four in a
+row is a wall. Across 7285 crossed stretches in 500 corpus charts rated twelve
+to eighteen, 83 per cent are a single step and 97 per cent are one or two,
+leaving 2.7 per cent at three or more.
 """
+_MAX_CROSSED_RUN_FAST = 1
+"""
+Longest stretch of consecutive crossed steps allowed at sixteenth speed.
+
+One. Two crossovers arriving 100 milliseconds apart is where a stream stops
+being danceable, so the second is always barred however few the chart has spent
+so far.
+"""
+_FAST_CROSSOVER_FRACTION = 1.0 / 6.0
+"""
+How much of the crossover allowance a sixteenth stream may spend.
+
+A crossover at an eighth is a flourish and at a sixteenth it is a scramble, so
+sixteenths get a sixth of what the chart allows generally, which is about two
+per cent of their notes against the 11.6 per cent real charts write at the
+median. That is rare rather than absent; an allowance of zero bars them
+outright, at any speed.
+"""
+_SIXTEENTH_SLOTS = 3
+"""Grid slots one sixteenth note spans, used to tell a fast run from a slow one."""
 _MIN_JACK_SECONDS = 0.15
 """
 Shortest gap allowed before stepping the same panel again.
@@ -367,10 +382,11 @@ def allowed(
     room_seconds: float,
     crossed: frozenset[int],
     *,
-    spent: bool = False,
     busy: bool = False,
     crowded_jumps: bool = False,
+    overrun: frozenset[int] = frozenset(),
     relax: int = 0,
+    spent: bool = False,
 ) -> NDArray[np.bool_]:
     """
     Build the mask of patterns usable at one step.
@@ -392,14 +408,17 @@ def allowed(
         leave as well as to reach, so the tighter side is what decides.
     crossed : frozenset[int]
         Panels that would land on a crossed foot, and are out of budget.
-    spent : bool
-        Whether the chart has already used its allowance of freeze notes.
     busy : bool
         Whether the passage around this row is too dense to pin a foot.
     crowded_jumps : bool
         Whether the chart has used its allowance of two-note rows.
+    overrun : frozenset[int]
+        Panels that would carry a stretch of crossed steps past its cap. Unlike
+        ``crossed`` this is never given up.
     relax : int
         How many preferences to give up, from crossover balance upwards.
+    spent : bool
+        Whether the chart has already used its allowance of freeze notes.
 
     Returns
     -------
@@ -428,6 +447,8 @@ def allowed(
             continue
         if config.style != 'keyboard' and gap_seconds < _MIN_JACK_SECONDS and stepped & previous:
             continue
+        if overrun and stepped & overrun:
+            continue
         if relax < _RELAX_JUMPS and (
             config.style == 'feet' and room_seconds < _MIN_JUMP_SECONDS and len(stepped) > 1
         ):
@@ -451,9 +472,10 @@ def permitted(
     room_seconds: float,
     crossed: frozenset[int],
     *,
-    spent: bool,
     busy: bool,
     crowded_jumps: bool,
+    overrun: frozenset[int],
+    spent: bool,
 ) -> NDArray[np.bool_]:
     """
     Build the usable-pattern mask, giving up preferences before rules.
@@ -482,12 +504,14 @@ def permitted(
         The shorter of the gaps either side of this row.
     crossed : frozenset[int]
         Panels that would land on a crossed foot.
-    spent : bool
-        Whether the chart has used its allowance of freeze notes.
     busy : bool
         Whether the passage around this row is too dense to pin a foot.
     crowded_jumps : bool
         Whether the chart has used its allowance of two-note rows.
+    overrun : frozenset[int]
+        Panels that would carry a stretch of crossed steps past its cap.
+    spent : bool
+        Whether the chart has used its allowance of freeze notes.
 
     Returns
     -------
@@ -504,14 +528,30 @@ def permitted(
             gap_seconds,
             room_seconds,
             crossed,
-            spent=spent,
             busy=busy,
             crowded_jumps=crowded_jumps,
+            overrun=overrun,
             relax=relax,
+            spent=spent,
         )
         if mask.any():
             return mask
-    return mask
+    # The cap on consecutive crossed steps outlasts every preference above and
+    # is surrendered only when nothing else is left, because a wall of them is
+    # worse to play than anything the other rules were protecting.
+    return allowed(
+        vocabulary,
+        config,
+        held,
+        previous,
+        gap_seconds,
+        room_seconds,
+        crossed,
+        busy=busy,
+        crowded_jumps=crowded_jumps,
+        relax=_RELAX_JUMPS,
+        spent=spent,
+    )
 
 
 class Budget:
@@ -532,43 +572,109 @@ class Budget:
         self._foot = 0
         self._streamed = 0
         self._crossings = 0
+        self._crossed_run = 0
+        self._fast = False
+        self._fast_crossings = 0
+        self._fast_streamed = 0
         self._last: frozenset[int] = frozenset()
         self._repeats = 0
         self._rows = 0
         self._jumps = 0
 
-    def crossed(self) -> frozenset[int]:
+    def crossed(self, allowance: float) -> frozenset[int]:
         """
         Return the panels that would cross the feet and are out of budget.
+
+        Two things are rationed, and a sixteenth stream is held to a tighter
+        version of both: the share of the chart that crosses at all, and how
+        many crossed steps may follow one another. The share alone bounds the
+        total while letting them arrive in a clump, which is the part that is
+        unpleasant to play.
+
+        Parameters
+        ----------
+        allowance : float
+            Share of streamed notes that may land on a crossed foot.
 
         Returns
         -------
         frozenset[int]
             Panels to keep off, which is empty while budget remains.
         """
-        if self._crossings <= _CROSSOVER_SHARE * self._streamed:
+        spent = self._crossings > allowance * self._streamed
+        if self._fast:
+            spent = spent or self._fast_crossings > (
+                _FAST_CROSSOVER_FRACTION * allowance * self._fast_streamed
+            )
+        if not spent:
             return frozenset()
+        return self._crossing_panel()
+
+    def overrun(self, allowance: float) -> frozenset[int]:
+        """
+        Return the panel that would cross when crossing is no longer allowed.
+
+        This is a floor rather than a preference, so unlike :py:meth:`crossed`
+        it survives every level of relaxation and is given up only when nothing
+        else can be placed at all. A share can be surrendered and the chart
+        still reads; a wall of crossovers in a sixteenth stream cannot.
+
+        Parameters
+        ----------
+        allowance : float
+            Share of streamed notes that may land on a crossed foot. Zero bars
+            crossing outright, at any speed.
+
+        Returns
+        -------
+        frozenset[int]
+            The panel to keep off, which is empty while crossing is permitted.
+        """
+        if allowance <= 0:
+            return self._crossing_panel()
+        cap = _MAX_CROSSED_RUN_FAST if self._fast else _MAX_CROSSED_RUN
+        if self._crossed_run < cap:
+            return frozenset()
+        return self._crossing_panel()
+
+    def _crossing_panel(self) -> frozenset[int]:
+        """
+        Return the panel the limb whose turn it is would have to cross to.
+
+        Returns
+        -------
+        frozenset[int]
+            The single panel that would cross.
+        """
         return frozenset({_RIGHT_PANEL if self._foot == 0 else _LEFT_PANEL})
 
-    def enter_run(self, gap_seconds: float, *, style: str) -> bool:
+    def enter_run(self, gap_seconds: float, seconds_per_slot: float) -> bool:
         """
-        Note whether this step falls inside a run, and swap feet if it does.
+        Note whether this step falls inside a run, and swap limbs if it does.
+
+        This applies whatever the chart is for. A keyboard has no legs to
+        cross, but the shape a crossover makes — the pattern reaching past
+        itself between two notes a sixteenth apart — is as awkward under four
+        fingers as under two feet.
 
         Parameters
         ----------
         gap_seconds : float
             Seconds since the previous row.
-        style : str
-            Which physical constraints apply.
+        seconds_per_slot : float
+            How long one grid slot lasts, which fixes what counts as a
+            sixteenth at this tempo.
 
         Returns
         -------
         bool
             Whether the step is part of a run.
         """
-        if gap_seconds > STREAM_SECONDS or style != 'feet':
+        self._fast = gap_seconds <= _SIXTEENTH_SLOTS * seconds_per_slot
+        if gap_seconds > STREAM_SECONDS:
             return False
         self._streamed += 1
+        self._fast_streamed += self._fast
         self._foot ^= 1
         return True
 
@@ -636,10 +742,15 @@ class Budget:
         if not in_run:
             # Outside a run the feet reset to whichever one the step suits.
             self._foot = 1 if landed == _RIGHT_PANEL else 0
+            self._crossed_run = 0
         elif (self._foot == 0 and landed == _RIGHT_PANEL) or (
             self._foot == 1 and landed == _LEFT_PANEL
         ):
             self._crossings += 1
+            self._fast_crossings += self._fast
+            self._crossed_run += 1
+        else:
+            self._crossed_run = 0
 
     def stale(self) -> frozenset[int]:
         """

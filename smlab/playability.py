@@ -289,6 +289,10 @@ def _crossed_steps(rows: Sequence[tuple[float, Sequence[int]]]) -> int:
     previous_time: float | None = None
     for time, codes in rows:
         stepped = {panel for panel, code in enumerate(codes) if code in _STEP_CODES}
+        if not stepped:
+            # A row that only releases a freeze is not a step, so it neither
+            # takes a turn in the alternation nor breaks the run around it.
+            continue
         # The opening note has no predecessor to alternate away from, so it
         # sets the foot rather than inheriting one.
         in_run = previous_time is not None and time - previous_time <= STREAM_SECONDS

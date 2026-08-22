@@ -216,7 +216,10 @@ def generate_rows(  # noqa: PLR0914
     past_slots: list[int] = []
     past_deltas: list[int] = []
     previous_panels: frozenset[int] = frozenset()
-    previous_slot = slots[0]
+    # Nothing precedes the first note, so it starts a run rather than joining
+    # one. Starting the gap at zero would count it as inside a run and flip the
+    # alternation, mirroring which foot is due for everything that follows.
+    previous_slot = slots[0] - _MAX_DELTA
     with torch.no_grad():
         for step, slot in enumerate(slots):
             past_slots.append(slot)
@@ -246,7 +249,7 @@ def generate_rows(  # noqa: PLR0914
             gap = (slot - previous_slot) * seconds_per_slot
             following = slots[step + 1] - slot if step + 1 < len(slots) else _MAX_DELTA
             room = min(gap, following * seconds_per_slot)
-            in_run = budget.enter_run(gap, style=config.style)
+            in_run = budget.enter_run(gap, seconds_per_slot)
             mask = permitted(
                 vocabulary,
                 config,
@@ -254,10 +257,11 @@ def generate_rows(  # noqa: PLR0914
                 previous_panels,
                 gap,
                 room,
-                budget.crossed() | budget.stale(),
-                spent=budget.freezes_spent(config.holds),
+                budget.crossed(config.crossover_share) | budget.stale(),
                 busy=tight[step],
                 crowded_jumps=budget.jumps_spent(config.jump_share),
+                overrun=budget.overrun(config.crossover_share),
+                spent=budget.freezes_spent(config.holds),
             )
             token = _sample(
                 scores + config.balance * panel_bias(membership, budget.usage),

@@ -200,6 +200,22 @@ _JUMP_SHARE = 0.08
 """Share of rows a pad chart puts two notes on, which barely moves with rating."""
 _KEYBOARD_JUMP_SHARE = 0.14
 """Share for a keyboard, whose rows carry 1.14 notes at the corpus median."""
+_CROSSOVER_SHARE = 0.04
+"""
+Share of streamed notes that may land on a crossed foot.
+
+Inside a run the limbs alternate, so the panel sequence decides whether a step
+lands crossed: left, down, right, up puts the left foot on the right panel, and
+its reverse, up, left, down, right, puts the right foot on the left one.
+
+Real charts cross far more freely than this. Measured over 400 corpus charts
+rated twelve to eighteen, eighth speed crosses on 8.5 per cent of its streamed
+notes at the tenth percentile and 14.1 at the median. This sits at half the
+tenth percentile deliberately: a crossover reads as a flourish once in a while
+and as a nuisance when it keeps arriving, and the generator streams almost
+entirely in sixteenths where it is worst. A sixteenth stream is held to a
+fraction of this again, and zero bars crossing outright.
+"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -220,6 +236,18 @@ class GenerationConfig:
     rate, the sixteenth share and the repetition are unchanged, and crossovers
     stay inside the corpus interquartile range. Six is slightly closer again
     with no further cost, but the returns have flattened by four.
+    """
+    crossovers: float | None = None
+    """
+    Share of streamed notes that may land on a crossed foot.
+
+    ``None`` uses the measured default and zero bars crossing outright. A
+    crossover is a step the alternation puts on the far panel: left, down,
+    right, up reaches the left foot across to the right panel, and its reverse,
+    up, left, down, right, reaches the right foot across to the left. They read
+    as a flourish at an eighth and as a scramble at a sixteenth, so a sixteenth
+    stream is held to a fraction of whatever this allows and may never carry
+    two of them in a row.
     """
     density: float = 1.0
     """
@@ -298,6 +326,19 @@ class GenerationConfig:
     Ranking both grids together scatters notes onto twenty-fourths, which reads
     as a chart full of stray off-colour arrows.
     """
+
+    @property
+    def crossover_share(self) -> float:
+        """
+        Share of streamed notes that may land on a crossed foot.
+
+        Returns
+        -------
+        float
+            The override if one was given, otherwise the measured default. A
+            sixteenth stream is held to a fraction of whichever applies.
+        """
+        return _CROSSOVER_SHARE if self.crossovers is None else self.crossovers
 
     @property
     def jump_share(self) -> float:

@@ -636,6 +636,16 @@ def _load_chart_model(
     ),
 )
 @click.option(
+    '--crossovers',
+    type=float,
+    default=None,
+    help=(
+        'Share of streamed notes that may land on a crossed foot. Omit for the measured '
+        'default, or pass 0 to bar crossovers entirely. A sixteenth stream is held to a '
+        'fraction of whatever applies.'
+    ),
+)
+@click.option(
     '--triplets/--no-triplets',
     default=False,
     help='Also place notes on the twelfth grid. Off by default; 74%% of charts never do.',
@@ -716,6 +726,7 @@ def generate(  # noqa: PLR0917
     image: bool,  # noqa: FBT001
     svg: bool,  # noqa: FBT001
     balance: float,
+    crossovers: float | None,
     triplets: bool,  # noqa: FBT001
     mines: bool,  # noqa: FBT001
     rolls: bool,  # noqa: FBT001
@@ -766,6 +777,7 @@ def generate(  # noqa: PLR0917
             )
         config = GenerationConfig(
             balance=balance,
+            crossovers=crossovers,
             density=density,
             difficulty=name,
             meter=rating,
