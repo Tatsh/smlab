@@ -40,6 +40,16 @@ _MEASURE_HEIGHT = _BEAT_HEIGHT * _BEATS_PER_MEASURE
 _COLUMN_GAP = 18
 _MARGIN = 14
 _HEADER = 34
+_NOTE_SHIFT = _BEAT_HEIGHT / 2
+"""
+How far below its beat a note is drawn, in pixels.
+
+Half a beat. Drawn where the arithmetic puts them, quarter notes sit exactly on
+the bar line and the beat lines, so the line runs through the arrow and the
+eye reads the measure as starting a note early. Nudging every note down by an
+eighth puts quarters inside the bar and eighths on the lines, which is how a
+chart is read.
+"""
 _TAP = 1
 _HOLD_HEAD = 2
 _TAIL = 3
@@ -195,7 +205,12 @@ def _position(slot: int) -> tuple[float, float]:
     column, offset = _column_of(slot // _SLOTS_PER_MEASURE)
     within = slot % _SLOTS_PER_MEASURE
     left = _MARGIN + column * (_LANES * _LANE + _COLUMN_GAP)
-    top = _HEADER + offset * _MEASURE_HEIGHT + within * _BEAT_HEIGHT / SUBDIVISIONS_PER_BEAT
+    top = (
+        _HEADER
+        + _NOTE_SHIFT
+        + offset * _MEASURE_HEIGHT
+        + within * _BEAT_HEIGHT / SUBDIVISIONS_PER_BEAT
+    )
     return left, top
 
 
@@ -316,7 +331,7 @@ def layout(rows: Sequence[tuple[int, Sequence[int]]], heading: Heading) -> Page:
     measures = rows[-1][0] // _SLOTS_PER_MEASURE + 1
     columns = (measures + MEASURES_PER_COLUMN - 1) // MEASURES_PER_COLUMN
     width = 2 * _MARGIN + columns * (_LANES * _LANE + _COLUMN_GAP)
-    height = _HEADER + MEASURES_PER_COLUMN * _MEASURE_HEIGHT + _MARGIN
+    height = int(_HEADER + _NOTE_SHIFT + MEASURES_PER_COLUMN * _MEASURE_HEIGHT + _MARGIN)
     banner = (
         f'{heading.title} — {heading.difficulty} {heading.meter} — '
         f'{heading.bpm:.2f} BPM — {len(rows)} rows'

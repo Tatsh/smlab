@@ -172,3 +172,22 @@ def test_every_shape_kind_survives_the_raster_back_end(tmp_path: Path) -> None:
     rows = [(0, [2, 0, 0, 0]), (12, [3, 0, 0, 5]), (24, [4, 1, 0, 0])]
     write_chart(destination, rows, _HEADING)
     assert destination.stat().st_size > 0
+
+
+def test_a_quarter_note_sits_inside_the_bar_rather_than_on_its_line() -> None:
+    # Drawn where the arithmetic puts it, the bar line runs through the arrow
+    # and the measure reads as starting a note early.
+    root = _parse(render_chart([(0, [1, 0, 0, 0])], _HEADING))
+    arrow = next(node for node in root.iter() if node.tag.endswith('polygon'))
+    tops = [float(pair.split(',')[1]) for pair in (arrow.get('points') or '').split()]
+    box = next(node for node in root.iter() if node.tag.endswith('rect') and node.get('stroke'))
+    assert min(tops) > float(box.get('y') or 0)
+
+
+def test_an_eighth_note_lands_on_a_beat_line() -> None:
+    # Half a beat below the downbeat is where the first beat line is drawn.
+    root = _parse(render_chart([(6, [1, 0, 0, 0])], _HEADING))
+    arrow = next(node for node in root.iter() if node.tag.endswith('polygon'))
+    centre = sum(float(p.split(',')[1]) for p in (arrow.get('points') or '').split()) / 7
+    lines = [float(node.get('y1') or 0) for node in root.iter() if node.tag.endswith('line')]
+    assert min(abs(centre - y) for y in lines) < 1.0
