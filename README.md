@@ -184,3 +184,12 @@ uv sync --group dev --extra stems
 ```shell
 uv run ruff format . && uv run ruff check . && uv run mypy smlab && uv run pytest
 ```
+
+torch is taken from PyPI, whose Linux wheels already carry CUDA, so a machine
+with an NVIDIA driver uses the GPU without any extra configuration. To build
+against something else — ROCm, a different CUDA release, or CPU only — install
+that variant over the top:
+
+```shell
+uv pip install --torch-backend=rocm6.4 torch
+```

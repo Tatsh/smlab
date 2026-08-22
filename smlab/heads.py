@@ -12,7 +12,7 @@ reached 0.978.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple, override
 
 from torch import nn
 import numpy as np
@@ -78,6 +78,7 @@ class PlacementHead(nn.Module):
         empty = np.zeros(MEASURE_SLOTS, dtype=np.float32)
         self.register_buffer('prior', torch.from_numpy(prior if prior is not None else empty))
 
+    @override
     def forward(
         self, encoded: torch.Tensor, position: torch.Tensor, weight: float = 1.0
     ) -> torch.Tensor:
@@ -139,6 +140,7 @@ class SelectionHead(nn.Module):
         self.decoder = nn.TransformerEncoder(layer, layers)
         self.output = nn.Linear(width, vocabulary)
 
+    @override
     def forward(self, encoded: torch.Tensor, batch: SelectionBatch) -> torch.Tensor:
         """
         Score the pattern of each step.

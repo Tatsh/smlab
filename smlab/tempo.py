@@ -294,34 +294,6 @@ def _refine_phase(envelope: NDArray[np.float64], frame_rate: float, period: floa
     return float(np.mod((peak + shift) * period / steps, period))
 
 
-def _grid_strength(
-    envelope: NDArray[np.float64], frame_rate: float, phase: float, period: float
-) -> float:
-    """
-    Return the mean envelope value sampled on a beat grid.
-
-    Parameters
-    ----------
-    envelope : :py:class:`~numpy.ndarray`
-        The onset strength envelope.
-    frame_rate : float
-        Envelope frames per second.
-    phase : float
-        Time of the first beat, in seconds.
-    period : float
-        Beat period in seconds.
-
-    Returns
-    -------
-    float
-        Mean onset strength across the grid, or zero when it is empty.
-    """
-    times = np.arange(phase, len(envelope) / frame_rate, period)
-    if times.size == 0:
-        return 0.0
-    return float(np.mean(_sample_envelope(envelope, times, frame_rate)))
-
-
 def snap_bpm(bpm: float, tolerance: float = _SNAP_TOLERANCE_BPM) -> float:
     """
     Snap a tempo onto a round value when it lands close to one.

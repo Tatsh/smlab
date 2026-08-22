@@ -20,6 +20,14 @@ def _parse(document: str) -> ET.Element:
     return ET.fromstring(document)  # noqa: S314
 
 
+def _bodies(document: str) -> list[float]:
+    return [
+        float(node.get('height', '0'))
+        for node in _parse(document).iter()
+        if node.tag.endswith('rect') and node.get('rx')
+    ]
+
+
 def test_an_empty_chart_still_draws_a_document() -> None:
     assert _parse(render_chart([], _HEADING)) is not None
 
@@ -65,6 +73,20 @@ def test_a_freeze_crossing_a_column_break_is_drawn_in_both() -> None:
     root = _parse(render_chart(rows, _HEADING))
     bodies = [node for node in root.iter() if node.tag.endswith('rect') and node.get('rx')]
     assert len(bodies) > 1
+
+
+def test_a_freeze_ending_on_a_bar_line_stays_inside_its_measure() -> None:
+    # The tail slot ends the freeze rather than carrying any of it. Drawing the
+    # measure that bar line opens took its extent from the previous column and
+    # produced one rectangle running the whole height of the page.
+    start = MEASURES_PER_COLUMN * _MEASURE - 12
+    rows = [(start, [0, 2, 0, 0]), (start + 12, [0, 3, 0, 0])]
+    bodies = _bodies(render_chart(rows, _HEADING))
+    assert len(bodies) == 1
+    # One beat of freeze cannot be taller than the four a whole measure covers.
+    assert bodies[0] <= max(
+        _bodies(render_chart([(0, [0, 2, 0, 0]), (_MEASURE, [0, 3, 0, 0])], _HEADING))
+    )
 
 
 def test_the_page_widens_with_the_song() -> None:

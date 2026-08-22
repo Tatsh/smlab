@@ -18,7 +18,7 @@ ambiguous by construction.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 import hashlib
 import json
 import logging
@@ -287,6 +287,7 @@ class ChartWindows(Dataset[dict[str, torch.Tensor]]):
             self._rng = np.random.default_rng(0 if info is None else info.seed % (2**32))
         return self._rng
 
+    @override
     def __getitem__(self, index: int) -> dict[str, torch.Tensor]:  # noqa: PLR0914
         """
         Return one training window.

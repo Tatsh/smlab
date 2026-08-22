@@ -15,7 +15,7 @@ thirteen times more often than chance.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 import logging
 
 from torch import nn
@@ -128,6 +128,7 @@ class PreviewModel(nn.Module):
         self.recurrent = nn.GRU(channels, hidden, batch_first=True, bidirectional=True)
         self.head = nn.Linear(2 * hidden, 1)
 
+    @override
     def forward(self, features: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         """
         Score each measure.

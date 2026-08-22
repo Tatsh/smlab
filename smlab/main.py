@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
-from typing import cast
+from typing import cast, override
 import getpass
 import json
 import logging
@@ -164,6 +164,7 @@ class _DifficultySpec(click.ParamType[tuple[str, int]]):
 
     name = 'difficulty'
 
+    @override
     def convert(
         self, value: str, param: click.Parameter | None, ctx: click.Context | None
     ) -> tuple[str, int]:

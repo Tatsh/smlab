@@ -226,6 +226,7 @@ reven
 reverseq
 ripgreprc
 riڼh
+rocm
 rqdtqe
 rqmtqn
 rqvtqw

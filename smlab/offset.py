@@ -25,7 +25,7 @@ every window of every song teaches it something about every phase.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from torch import nn
 import librosa
@@ -256,6 +256,7 @@ class OffsetModel(nn.Module):
         layers.append(nn.Conv1d(width, 1, 1))
         self.stack = nn.Sequential(*layers)
 
+    @override
     def forward(self, profile: torch.Tensor) -> torch.Tensor:
         """
         Score every bar position.

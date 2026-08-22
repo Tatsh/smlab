@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 import hashlib
 import logging
 
@@ -200,6 +200,7 @@ class FoldedProfiles(Dataset[tuple[torch.Tensor, torch.Tensor]]):
         """
         return len(self.paths) * (1 if self.validation else self.config.windows)
 
+    @override
     def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Fold one excerpt and label it.

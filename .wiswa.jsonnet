@@ -63,16 +63,6 @@ local utils = import 'utils.libsonnet';
           "sys_platform == 'darwin' and platform_machine == 'arm64'",
           "sys_platform == 'win32'",
         ],
-        // PyPI ships a CPU-only torch on Linux, and separation and training
-        // both want the GPU.
-        index: [{
-          explicit: true,
-          name: 'pytorch-cu128',
-          url: 'https://download.pytorch.org/whl/cu128',
-        }],
-        sources: {
-          torch: [{ index: 'pytorch-cu128', marker: "sys_platform == 'linux'" }],
-        },
       },
     },
   },

@@ -26,6 +26,7 @@ Three ideas shape it:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import override
 import math
 
 from torch import nn
@@ -132,6 +133,7 @@ class FilmConditioner(nn.Module):
         self.width = width
         """Channel width each block expects."""
 
+    @override
     def forward(
         self,
         difficulty: torch.Tensor,
@@ -207,6 +209,7 @@ class _ConvBlock(nn.Module):
         )
         self.norm = nn.GroupNorm(8, channels)
 
+    @override
     def forward(self, inputs: torch.Tensor, modulation: torch.Tensor) -> torch.Tensor:
         """
         Apply the block.
@@ -240,6 +243,7 @@ class _AttentionBlock(nn.Module):
             nn.Linear(width, 4 * width), nn.GELU(), nn.Dropout(dropout), nn.Linear(4 * width, width)
         )
 
+    @override
     def forward(
         self, inputs: torch.Tensor, modulation: torch.Tensor, mask: torch.Tensor | None
     ) -> torch.Tensor:
@@ -321,6 +325,7 @@ class AudioEncoder(nn.Module):
         self.conv_film = nn.Linear(settings.model_dimension, settings.channels)
         self.output_norm = nn.LayerNorm(settings.model_dimension)
 
+    @override
     def forward(
         self,
         features: torch.Tensor,

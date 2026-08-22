@@ -281,7 +281,9 @@ def _body(lane: int, start: int, stop: int, code: int) -> Iterable[Shape]:
     """
     colour = _ROLL_COLOUR if code == _ROLL_HEAD else _HOLD_COLOUR
     measure = start // _SLOTS_PER_MEASURE
-    while measure <= stop // _SLOTS_PER_MEASURE:
+    # The tail slot ends the freeze rather than carrying any of it, so a freeze
+    # stopping on a bar line covers nothing of the measure that line opens.
+    while measure <= (stop - 1) // _SLOTS_PER_MEASURE:
         head = max(start, measure * _SLOTS_PER_MEASURE)
         tail = min(stop, (measure + 1) * _SLOTS_PER_MEASURE)
         left, top = _position(head)
