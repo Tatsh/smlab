@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Literal
+import hashlib
 import re
 import shutil
 
@@ -33,6 +34,7 @@ __all__ = (
     'STEPFILE_VERSION',
     'Format',
     'SongMetadata',
+    'chart_hash',
     'measure_text',
     'radar_values',
     'render_simfile',
@@ -59,6 +61,7 @@ SLOTS_PER_MEASURE = int(BEATS_PER_MEASURE) * SUBDIVISIONS_PER_BEAT
 _SUBDIVISIONS = (4, 8, 12, 16, 24, 48)
 # Characters that are illegal or troublesome in directory names across the
 # filesystems StepMania packs get copied between.
+_COMMENT_PATTERN = re.compile(r'//[^\n]*')
 _UNSAFE_PATTERN = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 _TRAILING_PATTERN = re.compile(r'[. ]+$')
 _RADAR_COUNTS = (
@@ -398,6 +401,28 @@ def _measure_block(rows: Iterable[tuple[int, Sequence[int]]]) -> str:
     return '\n'.join(written)
 
 
+def chart_hash(note_data: str) -> str:
+    """
+    Digest note data the way Project OutFox fills in ``#CHARTHASH``.
+
+    The value hashed is the ``#NOTES`` tag exactly as the MSD parser hands it over, so comments are
+    gone but nothing is trimmed and the newline after the tag's colon is part of it. Carriage
+    returns are dropped because the file is read as text.
+
+    Parameters
+    ----------
+    note_data : str
+        Everything between the ``#NOTES`` colon and its closing semicolon.
+
+    Returns
+    -------
+    str
+        The digest as lower-case hexadecimal.
+    """
+    stripped = _COMMENT_PATTERN.sub('', note_data.replace('\r', ''))
+    return hashlib.md5(stripped.encode(), usedforsecurity=False).hexdigest()
+
+
 def _timing_tag(name: str, value: str) -> str:
     """
     Write one timing tag the way the editor lays them out.
@@ -431,9 +456,6 @@ def render_ssc(
 
     Every tag is written even when empty, because that is what the editor
     produces and it makes the result straightforward to fill in afterwards.
-    ``#CHARTHASH`` is left blank: it is a Project OutFox addition rather than
-    anything upstream StepMania writes, so there is no published digest to
-    reproduce, and a wrong one is worse than an absent one.
 
     Parameters
     ----------
@@ -500,12 +522,13 @@ def render_ssc(
         last = timing.time_at_beat(max(rows)[0] / SUBDIVISIONS_PER_BEAT) if rows else 0.0
         measured = radar_values(rows, seconds or last)
         radar = ','.join(f'{value:.6f}' for value in measured * _PLAYERS)
+        note_data = f'\n{_measure_block(rows)}\n'
         lines.extend([
             '',
             f'//---------------dance-single - {credit}----------------',
             '#NOTEDATA:;',
             f'#CHARTNAME:{credit};',
-            '#CHARTHASH:;',
+            f'#CHARTHASH:{chart_hash(note_data)};',
             '#CHARTTYPE:dance-single;',
             '#STEPSTYPE:dance-single;',
             '#BANNER:;',
@@ -517,9 +540,7 @@ def render_ssc(
             f'#LASTSECONDHINT:{last:.6f};',
             f'#RADARVALUES:{radar};',
             f'#CREDIT:{credit};',
-            '#NOTES:',
-            _measure_block(rows),
-            ';',
+            f'#NOTES:{note_data};',
         ])
     return '\n'.join([*lines, ''])
 

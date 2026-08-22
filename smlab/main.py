@@ -15,14 +15,13 @@ from bascom import setup_logging
 import click
 import torch
 
-from .audio import load_audio
+from .audio import audio_duration, load_audio
 from .chart import DIFFICULTIES
 from .chart_gen import generate_rows, song_features
 from .chart_image import Heading, write_chart
 from .corpus import EXCLUDED_PACKS, scan_corpus, write_manifest
 from .dataset import CODE_BY_CHAR, SUBDIVISIONS_PER_BEAT, beat_features
 from .encoder import EncoderConfig
-from .features import FINE_SUBDIVISIONS
 from .generate import (
     CLASSIC_SCALE,
     DEFAULT_BALANCE,
@@ -829,8 +828,7 @@ def generate(  # noqa: PLR0917
         f'Metadata: {metadata.title!r} by {metadata.artist or "unknown"}'
         f'{f" [{metadata.genre}]" if metadata.genre else ""}.'
     )
-    seconds = timing.time_at_beat(features.shape[0] / FINE_SUBDIVISIONS)
-    simfile = write_song(metadata, audio, timing, charts, output_dir, fmt, seconds)
+    simfile = write_song(metadata, audio, timing, charts, output_dir, fmt, audio_duration(audio))
     click.echo(f'Wrote {simfile.parent} containing {simfile.name} and the audio.')
     for name, rating, rows in charts if image else ():
         pictures = simfile.parent / IMAGE_DIRECTORY

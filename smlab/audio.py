@@ -28,6 +28,7 @@ __all__ = (
     'DEFAULT_N_MELS',
     'DEFAULT_SAMPLE_RATE',
     'OnsetParams',
+    'audio_duration',
     'envelope_rate',
     'load_audio',
     'onset_envelope',
@@ -106,6 +107,28 @@ def load_audio(path: Path, *, sample_rate: int = DEFAULT_SAMPLE_RATE) -> NDArray
     """
     samples, _ = librosa.load(str(path), sr=sample_rate, mono=True)
     return np.asarray(samples, dtype=np.float32)
+
+
+def audio_duration(path: Path, *, sample_rate: int = DEFAULT_SAMPLE_RATE) -> float:
+    """
+    Measure how long an audio file runs, by decoding it.
+
+    The duration a container advertises can be some way off what actually decodes, so the samples
+    are counted instead. StepMania divides the groove radar rates by this figure.
+
+    Parameters
+    ----------
+    path : :py:class:`~pathlib.Path`
+        The audio file to measure.
+    sample_rate : int
+        Target sample rate.
+
+    Returns
+    -------
+    float
+        Length in seconds.
+    """
+    return len(load_audio(path, sample_rate=sample_rate)) / sample_rate
 
 
 def envelope_rate(

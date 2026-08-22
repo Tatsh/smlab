@@ -8,6 +8,7 @@ from smlab.audio import (
     DEFAULT_HOP_LENGTH,
     DEFAULT_SAMPLE_RATE,
     OnsetParams,
+    audio_duration,
     envelope_rate,
     load_audio,
     onset_envelope,
@@ -49,6 +50,12 @@ def test_audio_is_resampled_to_the_rate_asked_for(tmp_path: Path) -> None:
     path = tmp_path / 'tone.wav'
     sf.write(path, np.zeros(44100, dtype='float32'), 44100)
     assert len(load_audio(path, sample_rate=11025)) == pytest.approx(11025, abs=64)
+
+
+def test_a_duration_counts_the_samples_that_decode(tmp_path: Path) -> None:
+    path = tmp_path / 'tone.wav'
+    sf.write(path, np.zeros(int(44100 * 1.5), dtype='float32'), 44100)
+    assert audio_duration(path) == pytest.approx(1.5, abs=0.01)
 
 
 def test_an_envelope_peaks_where_the_clicks_are() -> None:

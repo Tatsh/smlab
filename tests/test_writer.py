@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+import hashlib
+import re
 
 from smlab.dataset import SUBDIVISIONS_PER_BEAT
 from smlab.simfile import load_simfile
@@ -11,6 +13,7 @@ from smlab.writer import (
     SLOTS_PER_MEASURE,
     STEPFILE_VERSION,
     SongMetadata,
+    chart_hash,
     measure_text,
     radar_values,
     render_simfile,
@@ -287,10 +290,36 @@ def test_every_chart_tag_is_written() -> None:
         assert f'#{tag}:' in text
 
 
-def test_the_chart_hash_is_left_for_the_engine() -> None:
-    # It is a Project OutFox addition with no published digest to reproduce,
-    # and a wrong one is worse than an absent one.
-    assert '#CHARTHASH:;' in _ssc([(0, [1, 0, 0, 0])])
+def _notes_value(text: str) -> str:
+    # Reproduce what MsdFile::ReadBuf hands the loader: comments removed, and nothing trimmed.
+    body = text[text.index('#NOTES:') + len('#NOTES:') :]
+    return re.sub(r'//[^\n]*', '', body[: body.index(';')])
+
+
+def test_the_chart_hash_digests_the_note_data_the_engine_will_read() -> None:
+    text = _ssc([(0, [1, 0, 0, 0]), (SLOTS_PER_MEASURE, [0, 1, 0, 0])])
+    expected = hashlib.md5(_notes_value(text).encode(), usedforsecurity=False).hexdigest()
+    assert f'#CHARTHASH:{expected};' in text
+
+
+def test_the_chart_hash_ignores_comments_and_carriage_returns() -> None:
+    # The parser strips comments before the engine ever sees the note data, and the file is read
+    # as text, so neither can reach the digest.
+    # A comment leaves its line behind empty rather than removing it.
+    plain = '\n\n0000\n0000\n0000\n0000\n'
+    assert chart_hash('\n// measure 0\r\n0000\r\n0000\r\n0000\r\n0000\r\n') == chart_hash(plain)
+
+
+def test_the_chart_hash_is_sensitive_to_the_notes() -> None:
+    assert chart_hash('\n1000\n') != chart_hash('\n0100\n')
+
+
+def test_the_chart_hash_is_a_plain_md5_of_those_bytes() -> None:
+    # Pinned against md5sum over the same bytes, so the digest is verified by something other
+    # than the code under test.
+    assert chart_hash('\n// measure 0\n0000\n1000\n0000\n0001\n') == (
+        '1c720b64958384ee0c29614509c399aa'
+    )
 
 
 def test_measures_are_numbered_in_comments() -> None:
