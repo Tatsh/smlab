@@ -1,9 +1,8 @@
 """
 Tokeniser for the MSD tag syntax shared by ``.sm``, ``.ssc``, and ``.dwi``.
 
-All three formats store values as ``#TAG:value;`` structures, optionally with
-extra colon-separated fields, and allow ``//`` line comments. Values may span
-lines, which is how note data is embedded.
+All three formats store values as ``#TAG:value;`` structures, optionally with extra colon-separated
+fields, and allow ``//`` line comments. Values may span lines, which is how note data is embedded.
 """
 
 from __future__ import annotations
@@ -39,8 +38,8 @@ def read_simfile_text(path: Path) -> str:
     """
     Read a simfile, tolerating the mixed encodings found in real packs.
 
-    Japanese-authored simfiles are frequently Shift-JIS rather than UTF-8, and a
-    few are neither, so decoding falls back to Latin-1 with replacement.
+    Japanese-authored simfiles are frequently Shift-JIS rather than UTF-8, and a few are neither, so
+    decoding falls back to Latin-1 with replacement.
 
     Parameters
     ----------
@@ -65,8 +64,8 @@ def parse_msd(text: str) -> Iterator[MSDTag]:
     """
     Yield each ``#TAG:value;`` structure in an MSD document.
 
-    A missing terminating semicolon is tolerated, because it occurs in the wild,
-    by treating the next tag as the terminator.
+    A missing terminating semicolon is tolerated, because it occurs in the wild, by treating the
+    next tag as the terminator.
 
     Parameters
     ----------
@@ -87,14 +86,14 @@ def parse_msd(text: str) -> Iterator[MSDTag]:
         if semicolon < 0:
             end = next_hash if next_hash >= 0 else length
         elif 0 <= next_hash < semicolon:
-            # The tag was never terminated, so stop at the next one rather than
-            # swallowing it into this value.
+            # The tag was never terminated, so stop at the next one rather than swallowing it into
+            # this value.
             end = next_hash
         else:
             end = semicolon
         body = text[hash_at + 1 : end]
-        # A semicolon is consumed, but a tag that had to terminate the one
-        # before it must be seen again next pass or it is dropped.
+        # A semicolon is consumed, but a tag that had to terminate the one before it must be seen
+        # again next pass or it is dropped.
         index = end + 1 if end < length and text[end] == ';' else end
         if not body.strip():
             continue
@@ -128,8 +127,8 @@ def parse_beat_value_list(value: str) -> tuple[tuple[float, float], ...]:
     """
     Parse a ``beat=value,beat=value`` list such as ``#BPMS`` or ``#STOPS``.
 
-    Malformed entries are skipped rather than aborting the whole file, because
-    trailing commas and stray whitespace are common.
+    Malformed entries are skipped rather than aborting the whole file, because trailing commas and
+    stray whitespace are common.
 
     Parameters
     ----------

@@ -1,9 +1,9 @@
 """
 Scanning of a StepMania ``Songs`` tree into a ground-truth timing manifest.
 
-Every simfile in the corpus carries a human-verified tempo and offset paired
-with its audio, which makes the corpus a labelled benchmark for the timing
-estimator rather than merely training data for the step models.
+Every simfile in the corpus carries a human-verified tempo and offset paired with its audio, which
+makes the corpus a labelled benchmark for the timing estimator rather than merely training data for
+the step models.
 """
 
 from __future__ import annotations
@@ -45,9 +45,9 @@ EXCLUDED_PACKS = frozenset({
 """
 Packs left out of the corpus by default.
 
-``smlab output`` holds this tool's own generated charts, and training on those
-would feed the model its own mistakes back as ground truth. The others are
-excluded because their charting is not representative.
+``smlab output`` holds this tool's own generated charts, and training on those would feed the model
+its own mistakes back as ground truth. The others are excluded because their charting is not
+representative.
 
 :meta hide-value:
 """
@@ -62,10 +62,9 @@ KEYBOARD_PACKS = frozenset({
 """
 Packs authored for keyboard, whatever a feasibility check concludes.
 
-Whether two feet *could* reach the panels is a different question from whether
-the chart was written for them. A keyboard chart that happens to be danceable
-still carries keyboard phrasing, and labelling it otherwise teaches the model
-that the two idioms are interchangeable.
+Whether two feet *could* reach the panels is a different question from whether the chart was written
+for them. A keyboard chart that happens to be danceable still carries keyboard phrasing, and
+labelling it otherwise teaches the model that the two idioms are interchangeable.
 
 :meta hide-value:
 """
@@ -83,16 +82,15 @@ KEYBOARD_SONGS = frozenset({
 """
 Individual song directories authored for keyboard.
 
-Matched on the directory name, so copies of the same song in several packs are
-all covered.
+Matched on the directory name, so copies of the same song in several packs are all covered.
 
 :meta hide-value:
 """
 PREFERRED_SUFFIXES = ('.ssc', '.sm', '.dwi')
 """Simfile extensions in descending order of preference.
 
-``.ssc`` supersedes ``.sm`` and carries finer timing data, while ``.dwi`` is the
-oldest format and quantises its gap to whole milliseconds.
+``.ssc`` supersedes ``.sm`` and carries finer timing data, while ``.dwi`` is the oldest format and
+quantises its gap to whole milliseconds.
 
 :meta hide-value:
 """
@@ -163,14 +161,13 @@ def summarize_song(item: tuple[str, Path]) -> SongRecord | None:
     Parameters
     ----------
     item : tuple[str, :py:class:`~pathlib.Path`]
-        The pack name and song directory, passed as one argument so that the
-        function can be mapped across a process pool.
+        The pack name and song directory, passed as one argument so that the function can be mapped
+        across a process pool.
 
     Returns
     -------
     SongRecord | None
-        The summary, or ``None`` when the song has no simfile, no audio, or no
-        usable timing.
+        The summary, or ``None`` when the song has no simfile, no audio, or no usable timing.
     """
     pack, song_dir = item
     if (simfile_path := choose_simfile(song_dir)) is None:
