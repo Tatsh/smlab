@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+import sys
 
 from smlab.weights import (
     CHART_WEIGHTS,
@@ -92,3 +93,15 @@ def test_download_honours_the_configured_repository(
     resolve_weights(CHART_WEIGHTS, tmp_path / 'empty')
     assert download.call_args.kwargs['repo_id'] == 'someone/else'
     assert download.call_args.kwargs['revision'] == 'v3'
+
+
+def test_the_hub_client_being_absent_is_explained(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
+) -> None:
+    # Downloading is the fallback when nothing is local, so its absence has to
+    # point at the other way of supplying weights.
+    monkeypatch.delenv(REPOSITORY_VARIABLE, raising=False)
+    monkeypatch.chdir(tmp_path)
+    mocker.patch.dict(sys.modules, {'huggingface_hub': None})
+    with pytest.raises(WeightsError, match='huggingface-hub is needed'):
+        resolve_weights('chart.pt', None)

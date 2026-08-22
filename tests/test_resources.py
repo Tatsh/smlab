@@ -19,6 +19,8 @@ import torch
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from pytest_mock import MockerFixture
+
 _CPU = torch.device('cpu')
 
 
@@ -63,3 +65,9 @@ def test_local_vocabulary_overrides_the_bundled_one(tmp_path: Path) -> None:
     path = tmp_path / 'vocabulary.json'
     path.write_text('[343, 49]')
     assert load_vocabulary(path).patterns == (343, 49)
+
+
+def test_a_missing_asset_package_is_reported_as_absent(mocker: MockerFixture) -> None:
+    # An installation stripped of its assets must degrade rather than explode.
+    mocker.patch('smlab.resources.resources.files', side_effect=ModuleNotFoundError)
+    assert not has_asset(PREVIEW_ASSET)

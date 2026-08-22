@@ -3,12 +3,27 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+import json
 
-from smlab.vocab import Vocabulary, coverage, decode_row, encode_row
+from smlab.vocab import Vocabulary, build_vocabulary, coverage, decode_row, encode_row
+import numpy as np
 import pytest
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+def _write_entry(root: Path, charts: list[dict[str, np.ndarray]]) -> None:
+    shard = root / 'aa'
+    shard.mkdir(parents=True, exist_ok=True)
+    arrays: dict[str, np.ndarray] = {'features': np.zeros((8, 4), dtype=np.float16)}
+    meta = []
+    for index, chart in enumerate(charts):
+        arrays[f'panels_{index}'] = chart['panels']
+        arrays[f'slots_{index}'] = np.arange(len(chart['panels']), dtype=np.int32)
+        meta.append({'difficulty': 'Challenge', 'index': index, 'meter': 9})
+    arrays['meta'] = np.asarray(json.dumps(meta, sort_keys=True))
+    np.savez(shard / 'aa.npz', **arrays)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
 
 @pytest.mark.parametrize(
@@ -80,3 +95,36 @@ def test_coverage_reports_share_of_rows() -> None:
     assert coverage(counts, 2) == pytest.approx(0.9)
     assert coverage(counts, 3) == pytest.approx(1.0)
     assert coverage([], 5) == pytest.approx(0.0)
+
+
+def test_a_vocabulary_is_built_from_the_cache(tmp_path: Path) -> None:
+    # Frequency order matters: the commonest pattern becomes the fallback token.
+    charts = [{'panels': np.array([[1, 0, 0, 0]] * 5 + [[0, 1, 0, 0]] * 2, dtype=np.uint8)}]
+    _write_entry(tmp_path, charts)
+    built = build_vocabulary(tmp_path)
+    assert built.panels_of(0) == (1, 0, 0, 0)
+    assert built.panels_of(1) == (0, 1, 0, 0)
+
+
+def test_the_empty_row_is_never_in_the_vocabulary(tmp_path: Path) -> None:
+    # It is the commonest pattern in any chart and the one the selection head
+    # must never be able to choose.
+    charts = [{'panels': np.array([[0, 0, 0, 0]] * 50 + [[1, 0, 0, 0]], dtype=np.uint8)}]
+    _write_entry(tmp_path, charts)
+    built = build_vocabulary(tmp_path)
+    assert len(built) == 1
+    assert built.panels_of(0) == (1, 0, 0, 0)
+
+
+def test_the_vocabulary_is_truncated_to_the_limit(tmp_path: Path) -> None:
+    rows = [[code, 0, 0, 0] for code in (1, 2, 4, 6)]
+    _write_entry(tmp_path, [{'panels': np.array(rows, dtype=np.uint8)}])
+    assert len(build_vocabulary(tmp_path, limit=2)) == 2
+
+
+def test_an_unreadable_cache_entry_is_skipped(tmp_path: Path) -> None:
+    _write_entry(tmp_path, [{'panels': np.array([[1, 0, 0, 0]], dtype=np.uint8)}])
+    broken = tmp_path / 'zz'
+    broken.mkdir()
+    (broken / 'zz.npz').write_bytes(b'not an npz archive')
+    assert len(build_vocabulary(tmp_path)) == 1

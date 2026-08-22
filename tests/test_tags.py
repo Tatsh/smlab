@@ -91,3 +91,10 @@ def test_tagged_suffixes_are_attempted(suffix: str, tmp_path: Path) -> None:
     path = tmp_path / f'song{suffix}'
     path.write_bytes(b'')
     assert read_tags(path) == {}
+
+
+def test_a_file_with_no_tags_leaves_the_metadata_alone(tmp_path: Path) -> None:
+    path = tmp_path / 'song.xyz'
+    path.write_bytes(b'')
+    original = SongMetadata(title='Kept', artist='Also Kept')
+    assert apply_tags(original, path) is original

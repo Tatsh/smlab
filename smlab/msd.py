@@ -22,7 +22,8 @@ COMMENT_PATTERN = re.compile(r'//[^\r\n]*')
 
 :meta hide-value:
 """
-_ENCODINGS = ('utf-8', 'cp932', 'latin-1')
+_ENCODINGS = ('utf-8', 'cp932')
+"""Encodings tried in turn, before falling back to a lossy latin-1 read."""
 
 
 class MsdTag(NamedTuple):
@@ -92,7 +93,9 @@ def parse_msd(text: str) -> Iterator[MsdTag]:
         else:
             end = semicolon
         body = text[hash_at + 1 : end]
-        index = end + 1
+        # A semicolon is consumed, but a tag that had to terminate the one
+        # before it must be seen again next pass or it is dropped.
+        index = end + 1 if end < length and text[end] == ';' else end
         if not body.strip():
             continue
         params = body.split(':')
