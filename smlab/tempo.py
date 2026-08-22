@@ -1,55 +1,48 @@
 """
 Joint tempo and offset estimation from audio.
 
-Tempo and offset are recovered together rather than in sequence. For a track at
-a fixed tempo the beat grid is ``t_k = phase + k * 60 / bpm``, so one objective
-determines both quantities, and the phase is exactly what ``#OFFSET`` encodes.
+Tempo and offset are recovered together rather than in sequence. For a track at a fixed tempo the
+beat grid is ``t_k = phase + k * 60 / bpm``, so one objective determines both quantities, and the
+phase is exactly what ``#OFFSET`` encodes.
 
-The tempo comes from **folding** the onset envelope onto a candidate beat
-period and taking the mean onset strength at the beat phase. That picks the
-right *octave*: a grid at twice the true tempo necessarily samples the weak
-off-beats as well, which drags its mean down, whereas a grid at half the true
-tempo merely ties and is separated by a log-normal tempo prior.
+The tempo comes from **folding** the onset envelope onto a candidate beat period and taking the mean
+onset strength at the beat phase. That picks the right *octave*: a grid at twice the true tempo
+necessarily samples the weak off-beats as well, which drags its mean down, whereas a grid at half
+the true tempo merely ties and is separated by a log-normal tempo prior.
 
-Precision matters more than it first appears — an error of 0.05 BPM at 150 BPM
-drifts by 67 ms across a three-minute track, worse than the offset error being
-chased — but the fold is already precise enough. Its grid steps by 0.2 per
-cent, 0.28 BPM at 140, and measured against songs whose tempo it identifies
-correctly it lands within 0.192 BPM in the worst case and 0.064 at the median,
+Precision matters more than it first appears — an error of 0.05 BPM at 150 BPM drifts by 67 ms
+across a three-minute track, worse than the offset error being chased — but the fold is already
+precise enough. Its grid steps by 0.2 per cent, 0.28 BPM at 140, and measured against songs whose
+tempo it identifies correctly it lands within 0.192 BPM in the worst case and 0.064 at the median,
 against a half-BPM tolerance.
 
-An earlier version sharpened it anyway, taking the Fourier peak within one per
-cent of the fold's pick. Over two held-out halves that stage fixed no song and
-broke fourteen, dropping accuracy from 98.6 to 84.3 per cent: with nothing left
-to gain it could only wander off a tempo that was already right. It is gone.
+An earlier version sharpened it anyway, taking the Fourier peak within one per cent of the fold's
+pick. Over two held-out halves that stage fixed no song and broke fourteen, dropping accuracy from
+98.6 to 84.3 per cent: with nothing left to gain it could only wander off a tempo that was already
+right. It is gone.
 
-The phase, which is what ``#OFFSET`` encodes, is recovered here only as a
-fallback. :py:mod:`smlab.offset` does it properly.
+The phase, which is what ``#OFFSET`` encodes, is recovered here only as a fallback.
+:py:mod:`smlab.offset` does it properly.
 
-One tempo is assumed for the whole song, and an attempt to lift that did not
-survive measurement. Of 3842 corpus songs, 60 per cent declare one tempo and a
-further 17 per cent declare several within five per cent of each other, which
-is an author correcting drift rather than the music changing. Of the 872 that
-genuinely change, 34.6 per cent hold two clean tempi and 19.3 per cent three or
-four; the rest accelerate continuously or use tempi outside 40 to 400 BPM as a
-scroll-speed trick.
+One tempo is assumed for the whole song, and an attempt to lift that did not survive measurement. Of
+3842 corpus songs, 60 per cent declare one tempo and a further 17 per cent declare several within
+five per cent of each other, which is an author correcting drift rather than the music changing. Of
+the 872 that genuinely change, 34.6 per cent hold two clean tempi and 19.3 per cent three or four;
+the rest accelerate continuously or use tempi outside 40 to 400 BPM as a scroll-speed trick.
 
-Estimating the tempo in overlapping windows and grouping the ones that agree
-false-splits half of all constant-tempo songs, because a 25-second window
-resolves the tempo only 88 per cent of the time and a song holds twenty of
-them. Deciding the windows jointly, by a Viterbi pass over the tempo grid with
-a penalty for changing, is markedly better: at a 5 per cent false-split rate it
-finds a change in 40 per cent of songs that have one, against 10 per cent for
-grouping. It is still not enough. On the most favourable population — two to
-four clean tempi, no gimmicks — it recovers every tempo and no extras in 5.3
-per cent of cases and returns a partial answer in 84.
+Estimating the tempo in overlapping windows and grouping the ones that agree false-splits half of
+all constant-tempo songs, because a 25-second window resolves the tempo only 88 per cent of the time
+and a song holds twenty of them. Deciding the windows jointly, by a Viterbi pass over the tempo grid
+with a penalty for changing, is markedly better: at a 5 per cent false-split rate it finds a change
+in 40 per cent of songs that have one, against 10 per cent for grouping. It is still not enough. On
+the most favourable population — two to four clean tempi, no gimmicks — it recovers every tempo and
+no extras in 5.3 per cent of cases and returns a partial answer in 84.
 
-A partial answer is the worst outcome available. A chart pinned to one wrong
-tempo drifts predictably and ``--bpm`` fixes it; a chart whose grid is right
-for two minutes and wrong for one cannot be corrected by any single number.
-Weighed against constant-tempo songs being 77 per cent of the corpus, every
-operating point measured came out net harmful, so the attempt was removed
-rather than shipped behind a flag.
+A partial answer is the worst outcome available. A chart pinned to one wrong tempo drifts
+predictably and ``--bpm`` fixes it; a chart whose grid is right for two minutes and wrong for one
+cannot be corrected by any single number. Weighed against constant-tempo songs being 77 per cent of
+the corpus, every operating point measured came out net harmful, so the attempt was removed rather
+than shipped behind a flag.
 """
 
 from __future__ import annotations
@@ -99,36 +92,33 @@ _COARSE_STEP = 1.002
 """
 Ratio between adjacent tempi on the coarse search grid.
 
-Folding demands that a candidate stay phase-aligned for the whole span being
-folded, and the drift it accumulates is the span times the relative tempo
-error. This step size is therefore only valid over a short excerpt; applied to
-a full track it would smear every profile across an entire beat.
+Folding demands that a candidate stay phase-aligned for the whole span being folded, and the drift
+it accumulates is the span times the relative tempo error. This step size is therefore only valid
+over a short excerpt; applied to a full track it would smear every profile across an entire beat.
 """
 _COARSE_EXCERPT_SECONDS = 25.0
 """
 Span folded during the coarse tempo search.
 
-Shorter is better here, which is counter-intuitive until the drift arithmetic
-is written down: a candidate must stay phase-aligned across the whole span, and
-the drift it accumulates is the span times the relative tempo error. A short
-span tolerates a coarser grid, so it resolves the right neighbourhood more
-often, and the grid is fine enough that the neighbourhood is the answer.
+Shorter is better here, which is counter-intuitive until the drift arithmetic is written down: a
+candidate must stay phase-aligned across the whole span, and the drift it accumulates is the span
+times the relative tempo error. A short span tolerates a coarser grid, so it resolves the right
+neighbourhood more often, and the grid is fine enough that the neighbourhood is the answer.
 
-Measured across a training split, accuracy within one beat per minute rises
-from 60% at whole-track to 84% here, with a clear interior maximum: 76% at ten
-seconds, 84% at twenty-five, 72% at sixty.
+Measured across a training split, accuracy within one beat per minute rises from 60% at whole-track
+to 84% here, with a clear interior maximum: 76% at ten seconds, 84% at twenty-five, 72% at sixty.
 """
 _SNAP_TOLERANCE_BPM = 0.25
 """
 Distance within which a tempo is snapped to a round value.
 
-Most simfiles in the corpus are authored at whole or half beats per minute, so
-an estimate that lands just beside one almost certainly belongs on it.
+Most simfiles in the corpus are authored at whole or half beats per minute, so an estimate that
+lands just beside one almost certainly belongs on it.
 
-Measured over 180 songs with a declared constant tempo, widening this from 0.15
-to 0.25 takes exact agreement from 53.9 to 57.8 per cent, and nothing further
-is gained past 0.25. The narrower window missed cases like an estimate of
-169.347, which sits 0.153 away from 169.5 and drifts audibly over a song.
+Measured over 180 songs with a declared constant tempo, widening this from 0.15 to 0.25 takes exact
+agreement from 53.9 to 57.8 per cent, and nothing further is gained past 0.25. The narrower window
+missed cases like an estimate of 169.347, which sits 0.153 away from 169.5 and drifts audibly over a
+song.
 """
 _SNAP_DIVISOR = 2.0
 """Snapping resolution, where two gives whole and half beats per minute."""
@@ -142,10 +132,9 @@ ONSET_LATENCY_SECONDS = 0.0046
 """
 Constant delay between a transient and its detected onset.
 
-Spectral flux reports a transient once it has entered the analysis window, so
-every beat is detected slightly late. The magnitude was measured across a
-training split of the corpus and scales with window length as smearing
-predicts: about 4.6 ms at a 256-sample window, rising to 25 ms at 2048.
+Spectral flux reports a transient once it has entered the analysis window, so every beat is detected
+slightly late. The magnitude was measured across a training split of the corpus and scales with
+window length as smearing predicts: about 4.6 ms at a 256-sample window, rising to 25 ms at 2048.
 
 :meta hide-value:
 """
@@ -176,8 +165,8 @@ def _tempo_prior(bpm: NDArray[np.float64]) -> NDArray[np.float64]:
     """
     Return a log-normal preference over tempo.
 
-    Folding scores a tempo and its subharmonics almost equally, so this prior is
-    what separates them.
+    Folding scores a tempo and its subharmonics almost equally, so this prior is what separates
+    them.
 
     Parameters
     ----------
@@ -199,10 +188,9 @@ def _fold_scores(
     """
     Score each candidate tempo by mean onset strength at its beat phase.
 
-    Every frame is assigned the phase it occupies within a candidate beat
-    period, and frames sharing a phase bin are averaged. The strongest bin is
-    the candidate's score, which is high only when onsets recur at exactly that
-    period.
+    Every frame is assigned the phase it occupies within a candidate beat period, and frames sharing
+    a phase bin are averaged. The strongest bin is the candidate's score, which is high only when
+    onsets recur at exactly that period.
 
     Parameters
     ----------
@@ -260,9 +248,9 @@ def _refine_phase(envelope: NDArray[np.float64], frame_rate: float, period: floa
     """
     Find the beat phase that maximises accumulated onset strength.
 
-    A spectral phase would be biased here: an onset envelope is an impulse train
-    with a sharp attack and slow decay, so its fundamental sinusoid peaks later
-    than the onsets themselves. Folding locks onto the real peaks instead.
+    A spectral phase would be biased here: an onset envelope is an impulse train with a sharp attack
+    and slow decay, so its fundamental sinusoid peaks later than the onsets themselves. Folding
+    locks onto the real peaks instead.
 
     Parameters
     ----------
@@ -334,14 +322,13 @@ def estimate_tempo(
     Returns
     -------
     tuple[float, float]
-        The tempo in beats per minute and a confidence ratio, or zeros when the
-        envelope carries no usable periodicity.
+        The tempo in beats per minute and a confidence ratio, or zeros when the envelope carries no
+        usable periodicity.
     """
     steps = int(np.log(max_bpm / min_bpm) / np.log(_COARSE_STEP)) + 1
     tempi = min_bpm * _COARSE_STEP ** np.arange(steps, dtype=np.float64)
-    # Fold only an excerpt, taken from the middle so that intros and silence do
-    # not dominate, because the grid spacing is only fine enough to stay
-    # aligned across a short span.
+    # Fold only an excerpt, taken from the middle so that intros and silence do not dominate,
+    # because the grid spacing is only fine enough to stay aligned across a short span.
     span = int(_COARSE_EXCERPT_SECONDS * frame_rate)
     start = max((len(envelope) - span) // 2, 0)
     excerpt = envelope[start : start + span] if len(envelope) > span else envelope
@@ -384,9 +371,9 @@ def estimate_timing_from_envelopes(
         return _EMPTY.copy()
     period = 60.0 / bpm
     phase_values = envelopes.phase.astype(np.float64)
-    # Folding already locks onto the downbeat in most music, because that is
-    # where the strongest recurring onset sits. Re-picking the loudest of the
-    # four beats afterwards moves off it, since the backbeat is usually louder.
+    # Folding already locks onto the downbeat in most music, because that is where the strongest
+    # recurring onset sits. Re-picking the loudest of the four beats afterwards moves off it, since
+    # the backbeat is usually louder.
     downbeat = _refine_phase(phase_values, frame_rate, period) - ONSET_LATENCY_SECONDS
     # Beat 0 sits at -OFFSET, so the offset is the negated downbeat time.
     return {'bpm': bpm, 'confidence': confidence, 'offset': -downbeat}

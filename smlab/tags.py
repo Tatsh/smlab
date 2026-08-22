@@ -1,10 +1,10 @@
 """
 Reading song metadata from audio file tags.
 
-MP3 carries ID3 frames and Ogg carries Vorbis comments, which name the same
-fields differently. Mutagen's "easy" interface maps both onto one vocabulary, so
-only the field names peculiar to simfiles need handling here. WAV is not
-supported, since it has no standard tagging scheme worth relying on.
+MP3 carries ID3 frames and Ogg carries Vorbis comments, which name the same fields differently.
+Mutagen's "easy" interface maps both onto one vocabulary, so only the field names peculiar to
+simfiles need handling here. WAV is not supported, since it has no standard tagging scheme worth
+relying on.
 """
 
 from __future__ import annotations
@@ -32,10 +32,9 @@ WAV is deliberately absent because it has no standard tag scheme.
 
 :meta hide-value:
 """
-# Simfile field name mapped to the tag names that may carry it, in preference
-# order. Subtitle is deliberately absent: the tags that might supply it carry
-# release details rather than the parenthetical a simfile expects, so it is
-# left blank unless given explicitly.
+# Simfile field name mapped to the tag names that may carry it, in preference order. Subtitle is
+# deliberately absent: the tags that might supply it carry release details rather than the
+# parenthetical a simfile expects, so it is left blank unless given explicitly.
 _FIELD_TAGS = {
     'artist': ('artist', 'albumartist', 'performer'),
     'genre': ('genre',),
@@ -55,8 +54,8 @@ def read_tags(path: Path) -> dict[str, str]:
     Returns
     -------
     dict[str, str]
-        Simfile field names mapped to values, omitting anything absent or
-        empty. An unreadable or untagged file yields an empty mapping.
+        Simfile field names mapped to values, omitting anything absent or empty. An unreadable or
+        untagged file yields an empty mapping.
     """
     if path.suffix.lower() not in TAGGED_SUFFIXES:
         return {}
@@ -81,8 +80,8 @@ def apply_tags(metadata: SongMetadata, path: Path) -> SongMetadata:
     """
     Fill unset metadata fields from an audio file's tags.
 
-    Values already present are preserved, so anything given on the command line
-    wins over what the file claims.
+    Values already present are preserved, so anything given on the command line wins over what the
+    file claims.
 
     Parameters
     ----------

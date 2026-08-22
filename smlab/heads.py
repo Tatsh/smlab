@@ -1,13 +1,11 @@
 """
 Placement and selection heads reading the shared audio encoder.
 
-The placement head emits a *correction* to a fixed metric prior rather than a
-probability. The empirical odds of a step given its position in the bar are
-computed once from the corpus and added as a bias the network cannot change, so
-rediscovering "notes fall on beats" earns it nothing. Whatever accuracy it
-gains above that bias must come from the audio, which is the property the first
-model lacked: it reached 0.986 overall AUC where a 48-entry lookup table
-reached 0.978.
+The placement head emits a *correction* to a fixed metric prior rather than a probability. The
+empirical odds of a step given its position in the bar are computed once from the corpus and added
+as a bias the network cannot change, so rediscovering "notes fall on beats" earns it nothing.
+Whatever accuracy it gains above that bias must come from the audio, which is the property the first
+model lacked: it reached 0.986 overall AUC where a 48-entry lookup table reached 0.978.
 """
 
 from __future__ import annotations
@@ -92,9 +90,9 @@ class PlacementHead(nn.Module):
         position : :py:class:`~torch.Tensor`
             Position within the bar per slot, shaped ``(batch, slots)``.
         weight : float
-            How much of the metric prior to add. One reproduces training. Less
-            than one leans on the audio, which matters when the scores are used
-            for ranking rather than as probabilities.
+            How much of the metric prior to add. One reproduces training. Less than one leans on
+            the audio, which matters when the scores are used for ranking rather than as
+            probabilities.
 
         Returns
         -------

@@ -1,15 +1,13 @@
 """
 Render a chart as a picture, in the style step artists read charts in.
 
-Measures run down a column and columns run left to right, so a whole song fits
-on one page and its shape — where the streams are, where it rests, whether one
-panel is being leaned on — is visible at a glance. Note colour follows the
-StepMania convention, where the colour says which subdivision of the beat a
-note falls on.
+Measures run down a column and columns run left to right, so a whole song fits on one page and its
+shape — where the streams are, where it rests, whether one panel is being leaned on — is visible at
+a glance. Note colour follows the StepMania convention, where the colour says which subdivision of
+the beat a note falls on.
 
-The page is laid out once as a list of shapes and then handed to one of two
-back ends, so the PNG and the SVG are the same drawing rather than two
-drawings that have to be kept in step.
+The page is laid out once as a list of shapes and then handed to one of two back ends, so the PNG
+and the SVG are the same drawing rather than two drawings that have to be kept in step.
 """
 
 from __future__ import annotations
@@ -44,11 +42,10 @@ _NOTE_SHIFT = _BEAT_HEIGHT / 2
 """
 How far below its beat a note is drawn, in pixels.
 
-Half a beat. Drawn where the arithmetic puts them, quarter notes sit exactly on
-the bar line and the beat lines, so the line runs through the arrow and the
-eye reads the measure as starting a note early. Nudging every note down by an
-eighth puts quarters inside the bar and eighths on the lines, which is how a
-chart is read.
+Half a beat. Drawn where the arithmetic puts them, quarter notes sit exactly on the bar line and the
+beat lines, so the line runs through the arrow and the eye reads the measure as starting a note
+early. Nudging every note down by an eighth puts quarters inside the bar and eighths on the lines,
+which is how a chart is read.
 """
 _TAP = 1
 _HOLD_HEAD = 2
@@ -71,9 +68,8 @@ _COLORS = {
 """
 Note colour by position within the beat, on the twelfth-of-a-beat grid.
 
-Quarters are red, eighths blue, twelfths purple, sixteenths yellow and
-twenty-fourths pink, following StepMania. Anything finer falls through to
-:py:data:`_FINE_COLOR`.
+Quarters are red, eighths blue, twelfths purple, sixteenths yellow and twenty-fourths pink,
+following StepMania. Anything finer falls through to :py:data:`_FINE_COLOR`.
 """
 _FINE_COLOR = '#4cc76a'
 _MINE_COLOR = '#8d8d99'
@@ -296,8 +292,8 @@ def _body(lane: int, start: int, stop: int, code: int) -> Iterable[Shape]:
     """
     color = _ROLL_COLOR if code == _ROLL_HEAD else _HOLD_COLOR
     measure = start // _SLOTS_PER_MEASURE
-    # The tail slot ends the freeze rather than carrying any of it, so a freeze
-    # stopping on a bar line covers nothing of the measure that line opens.
+    # The tail slot ends the freeze rather than carrying any of it, so a freeze stopping on a bar
+    # line covers nothing of the measure that line opens.
     while measure <= (stop - 1) // _SLOTS_PER_MEASURE:
         head = max(start, measure * _SLOTS_PER_MEASURE)
         tail = min(stop, (measure + 1) * _SLOTS_PER_MEASURE)

@@ -1,15 +1,13 @@
 """
 Generation with the shared encoder model.
 
-Inference mirrors training: the song is separated into stems, resampled onto
-the fine beat grid, and encoded once. The placement head then ranks every note
-slot and the selection head walks the chosen ones in order, so both heads see
-the same reading of the music.
+Inference mirrors training: the song is separated into stems, resampled onto the fine beat grid, and
+encoded once. The placement head then ranks every note slot and the selection head walks the chosen
+ones in order, so both heads see the same reading of the music.
 
-How many slots to keep is decided separately from which ones, because the
-placement head ranks well but is not calibrated. Keeping the number a rating
-implies preserves the ranking and leaves quiet passages empty, which is what a
-rest is.
+How many slots to keep is decided separately from which ones, because the placement head ranks well
+but is not calibrated. Keeping the number a rating implies preserves the ranking and leaves quiet
+passages empty, which is what a rest is.
 """
 
 from __future__ import annotations
@@ -64,17 +62,15 @@ _PRIOR_WEIGHT = 0.25
 """
 How much of the metric prior to keep when ranking slots.
 
-The prior is right about probability and wrong for ranking. It puts quarter
-notes far above everything else at every point in the song, so taking the
-highest scoring slots fills every quarter in the piece before it takes a single
-sixteenth anywhere. Charts do not work that way: they put sixteenth runs in
-particular bars and leave others sparse.
+The prior is right about probability and wrong for ranking. It puts quarter notes far above
+everything else at every point in the song, so taking the highest scoring slots fills every quarter
+in the piece before it takes a single sixteenth anywhere. Charts do not work that way: they put
+sixteenth runs in particular bars and leave others sparse.
 
-Damping it lets the audio decide. Measured on one song at rating nine, the
-share of sixteenths and finer goes 1.3 per cent at full weight, 6 at a half and
-13 at a quarter, against 13.2 per cent for real charts of that rating. Dropping
-the prior entirely overshoots to 21 per cent and starts placing notes off the
-sixteenth grid altogether.
+Damping it lets the audio decide. Measured on one song at rating nine, the share of sixteenths and
+finer goes 1.3 per cent at full weight, 6 at a half and 13 at a quarter, against 13.2 per cent for
+real charts of that rating. Dropping the prior entirely overshoots to 21 per cent and starts placing
+notes off the sixteenth grid altogether.
 """
 
 
@@ -116,8 +112,7 @@ def encode_song(
     """
     Encode a whole song and score every note slot.
 
-    Long songs are encoded in windows, because attention over the full length
-    would not fit.
+    Long songs are encoded in windows, because attention over the full length would not fit.
 
     Parameters
     ----------
@@ -138,15 +133,15 @@ def encode_song(
     model.eval()
     note_slots = features.shape[0] // 2
     if note_slots == 0:
-        # Audio shorter than two fine slots leaves nothing to chart, and the
-        # chunk loop would otherwise concatenate an empty list of tensors.
+        # Audio shorter than two fine slots leaves nothing to chart, and the chunk loop would
+        # otherwise concatenate an empty list of tensors.
         return torch.zeros((0, 0), device=device), np.zeros(0, dtype=np.float32)
     difficulty = torch.tensor([difficulty_index(config.difficulty)], device=device)
     meter = torch.tensor([min(max(config.meter, 0), MAX_METER - 1)], device=device)
     scale = torch.tensor([0 if config.scale <= _CLASSIC_SCALE else 1], device=device)
     style = torch.tensor([STYLES.index(config.style)], device=device)
-    # The same note rate the slot budget is drawn from, so the encoder is told
-    # how dense the chart it is being asked for will actually be.
+    # The same note rate the slot budget is drawn from, so the encoder is told how dense the chart
+    # it is being asked for will actually be.
     rate = torch.tensor([min(int(config.rate), MAX_RATE - 1)], device=device)
     encoded: list[torch.Tensor] = []
     logits = np.zeros(note_slots, dtype=np.float32)
@@ -217,20 +212,19 @@ def generate_rows(  # noqa: PLR0914
     past_slots: list[int] = []
     past_deltas: list[int] = []
     previous_panels: frozenset[int] = frozenset()
-    # Nothing precedes the first note, so it starts a run rather than joining
-    # one. Starting the gap at zero would count it as inside a run and flip the
-    # alternation, mirroring which foot is due for everything that follows.
+    # Nothing precedes the first note, so it starts a run rather than joining one. Starting the gap
+    # at zero would count it as inside a run and flip the alternation, mirroring which foot is due
+    # for everything that follows.
     previous_slot = slots[0] - _MAX_DELTA
     with torch.no_grad():
         for step, slot in enumerate(slots):
             past_slots.append(slot)
             past_deltas.append(min(slot - previous_slot, _MAX_DELTA))
-            # The head is a causal transformer trained on long stretches of a
-            # chart. Handing it only the current step would leave its attention
-            # with nothing to look at but that step, and the pattern embedding
-            # is then the sole input reaching the output, so it echoes whatever
-            # came before and the chart repeats one arrow forever. It has to be
-            # re-run over the recent history and read at the last position.
+            # The head is a causal transformer trained on long stretches of a chart. Handing it only
+            # the current step would leave its attention with nothing to look at but that step, and
+            # the pattern embedding is then the sole input reaching the output, so it echoes
+            # whatever came before and the chart repeats one arrow forever. It has to be re-run over
+            # the recent history and read at the last position.
             window = slice(max(len(past_slots) - _CONTEXT_STEPS, 0), len(past_slots))
             context = past_slots[window]
             batch = SelectionBatch(
@@ -242,10 +236,9 @@ def generate_rows(  # noqa: PLR0914
                 slots=torch.tensor([context], device=device),
             )
             scores = model.selection(encoded.unsqueeze(0), batch)[0, -1].float().cpu().numpy()
-            # A hold that has run too long is ended by writing its tail. Merely
-            # forgetting it would leave a head with no terminator, which makes
-            # the panel read as occupied for the rest of the song and stops the
-            # file loading at all.
+            # A hold that has run too long is ended by writing its tail. Merely forgetting it would
+            # leave a head with no terminator, which makes the panel read as occupied for the rest
+            # of the song and stops the file loading at all.
             _expire_holds(rows, held, slot)
             gap = (slot - previous_slot) * seconds_per_slot
             following = slots[step + 1] - slot if step + 1 < len(slots) else _MAX_DELTA
@@ -272,9 +265,9 @@ def generate_rows(  # noqa: PLR0914
             )
             codes = list(vocabulary.panels_of(token))
             budget.record(vocabulary.stepped_panels(token), codes, in_run=in_run)
-            # Nothing releases a panel here. Slots strictly increase, so the
-            # expiry above has already closed every open freeze, and with none
-            # open the mask bars a tail as an orphan.
+            # Nothing releases a panel here. Slots strictly increase, so the expiry above has
+            # already closed every open freeze, and with none open the mask bars a tail as an
+            # orphan.
             for panel, code in enumerate(codes):
                 if code in HOLD_CODES:
                     held[panel] = slot
@@ -291,9 +284,8 @@ def _expire_holds(rows: list[tuple[int, list[int]]], held: dict[int, int], slot:
     """
     End any hold that has run longer than a phrase.
 
-    A hold that is merely forgotten leaves a head with no terminator, which
-    makes its panel read as occupied for the rest of the song and stops the
-    file loading at all, so the tail is written out.
+    A hold that is merely forgotten leaves a head with no terminator, which makes its panel read as
+    occupied for the rest of the song and stops the file loading at all, so the tail is written out.
 
     Parameters
     ----------
@@ -304,9 +296,9 @@ def _expire_holds(rows: list[tuple[int, list[int]]], held: dict[int, int], slot:
     slot : int
         Slot being decoded.
     """
-    # Every freeze ends before the next note lands. A freeze only starts where
-    # there is room for it, so ending it here is what keeps the other foot idle
-    # for its whole span; letting it run on is what pinned a foot for two bars.
+    # Every freeze ends before the next note lands. A freeze only starts where there is room for it,
+    # so ending it here is what keeps the other foot idle for its whole span; letting it run on is
+    # what pinned a foot for two bars.
     expired = [panel for panel, began in held.items() if slot > began]
     if not expired:
         return
@@ -365,8 +357,8 @@ def _sample(
         return int(np.argmax(scores))
     scaled = scores / max(temperature, 1e-3)
     scaled[~mask] = -np.inf
-    # Subtracting the largest score leaves at least one entry at zero, so the
-    # weights always total one or more and the division below is safe.
+    # Subtracting the largest score leaves at least one entry at zero, so the weights always total
+    # one or more and the division below is safe.
     scaled -= scaled.max()
     weights = np.exp(scaled)
     return int(rng.choice(len(weights), p=weights / weights.sum()))

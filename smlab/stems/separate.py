@@ -1,15 +1,13 @@
 """
 Separating a song into the layers a chart can follow.
 
-Steps follow whatever stands out: a bassline, a vocal line, a guitar solo, a
-drum fill. A mel spectrogram of the mixture forces a network to disentangle
-overlapping instruments from frequency alone, which is exactly what fails when
-a guitar and a vocal share a band. Separating first turns "which layer is
-prominent right now" into something a model can read rather than infer.
+Steps follow whatever stands out: a bassline, a vocal line, a guitar solo, a drum fill. A mel
+spectrogram of the mixture forces a network to disentangle overlapping instruments from frequency
+alone, which is exactly what fails when a guitar and a vocal share a band. Separating first turns
+"which layer is prominent right now" into something a model can read rather than infer.
 
-``htdemucs`` splits into drums, bass, other, and vocals, which is close to a
-one-to-one match with the layers charts follow, and runs at roughly seventy
-times realtime on a consumer GPU.
+``htdemucs`` splits into drums, bass, other, and vocals, which is close to a one-to-one match with
+the layers charts follow, and runs at roughly seventy times realtime on a consumer GPU.
 """
 
 from __future__ import annotations
@@ -50,8 +48,8 @@ class Separator(Protocol):
     """
     The part of a demucs model this package uses.
 
-    Demucs ships no stubs describing these attributes on the module it returns,
-    so the surface actually relied upon is declared here instead.
+    Demucs ships no stubs describing these attributes on the module it returns, so the surface
+    actually relied upon is declared here instead.
     """
 
     @property

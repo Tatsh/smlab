@@ -1,18 +1,16 @@
 """
 Training examples drawn from the stem feature cache.
 
-Entries are read from disk per window rather than held in memory, because the
-cache runs to fourteen gigabytes. The cache is written uncompressed for this
-reason: reading one window out of a compressed archive costs 20 ms because the
-whole feature array has to be inflated first, against 1.5 ms uncompressed.
-Passing ``mmap_mode`` does not rescue the compressed case, since numpy ignores
-it there rather than reporting that it cannot comply.
+Entries are read from disk per window rather than held in memory, because the cache runs to fourteen
+gigabytes. The cache is written uncompressed for this reason: reading one window out of a compressed
+archive costs 20 ms because the whole feature array has to be inflated first, against 1.5 ms
+uncompressed. Passing ``mmap_mode`` does not rescue the compressed case, since numpy ignores it
+there rather than reporting that it cannot comply.
 
-The rating scale a chart uses is not recorded in the simfile, so it is inferred
-from its pack: a pack whose charts never exceed ten is using the classic scale,
-and one that reaches thirteen or more is using the twenty-point scale. Without
-this the same number means two different difficulties and the conditioning is
-ambiguous by construction.
+The rating scale a chart uses is not recorded in the simfile, so it is inferred from its pack: a
+pack whose charts never exceed ten is using the classic scale, and one that reaches thirteen or more
+is using the twenty-point scale. Without this the same number means two different difficulties and
+the conditioning is ambiguous by construction.
 """
 
 from __future__ import annotations
@@ -127,22 +125,19 @@ MIRRORS = (
 """
 The four reflections of a dance pad, as panel permutations.
 
-Left and right may be swapped, up and down may be swapped, and either may be
-done independently: all four leave a chart exactly as playable as it started,
-because they are symmetries of the pad itself.
+Left and right may be swapped, up and down may be swapped, and either may be done independently: all
+four leave a chart exactly as playable as it started, because they are symmetries of the pad itself.
 
-These are the Klein four-group, and it is worth being clear about what they
-cannot do. Every one of them maps the outer pair onto the outer pair and the
-middle pair onto the middle pair, so no amount of training or averaging over
-them can move weight between those pairs. The bias the model actually has is
-exactly that split: about a third of its notes on each of down and up against a
-sixth on each of left and right. Two retrains and an inference-time average
-over these reflections all failed to shift it, for that reason.
+These are the Klein four-group, and it is worth being clear about what they cannot do. Every one of
+them maps the outer pair onto the outer pair and the middle pair onto the middle pair, so no amount
+of training or averaging over them can move weight between those pairs. The bias the model actually
+has is exactly that split: about a third of its notes on each of down and up against a sixth on each
+of left and right. Two retrains and an inference-time average over these reflections all failed to
+shift it, for that reason.
 
-Reaching it would need a quarter turn, and a quarter turn is not a symmetry of
-*play*: left and right are naturally one foot each while up and down are
-shared, so turning a left-right alternation into an up-down one changes the
-difficulty. The bias is corrected at decode time instead, by
+Reaching it would need a quarter turn, and a quarter turn is not a symmetry of *play*: left and
+right are naturally one foot each while up and down are shared, so turning a left-right alternation
+into an up-down one changes the difficulty. The bias is corrected at decode time instead, by
 :py:attr:`~smlab.generate.GenerationConfig.balance`.
 
 :meta hide-value:
@@ -195,8 +190,8 @@ def measure_prior(examples: list[ChartExample]) -> NDArray[np.float32]:
     """
     Compute the log-odds of a step at each position in the bar.
 
-    This becomes a fixed bias on the placement head, so the network cannot earn
-    accuracy by rediscovering that notes fall on beats.
+    This becomes a fixed bias on the placement head, so the network cannot earn accuracy by
+    rediscovering that notes fall on beats.
 
     Parameters
     ----------
@@ -270,12 +265,11 @@ class ChartWindows(Dataset[dict[str, torch.Tensor]]):
         """
         Source of window starts and mirrors, seeded per loader worker.
 
-        A generator made in ``__init__`` is copied into every worker process
-        along with its state, so all of them draw the same window starts and
-        the same mirrors in lockstep. That is not a small waste: with six
-        workers the model sees a sixth of the window variety it should, and the
-        run cannot be reproduced from the seed alone. PyTorch gives each worker
-        a distinct seed per epoch, which is what this defers to.
+        A generator made in ``__init__`` is copied into every worker process along with its state,
+        so all of them draw the same window starts and the same mirrors in lockstep. That is not a
+        small waste: with six workers the model sees a sixth of the window variety it should, and
+        the run cannot be reproduced from the seed alone. PyTorch gives each worker a distinct seed
+        per epoch, which is what this defers to.
 
         Returns
         -------
@@ -331,9 +325,8 @@ class ChartWindows(Dataset[dict[str, torch.Tensor]]):
                 else np.zeros((0, 4), dtype=np.uint8)
             )
         rate = _note_rate(slots, example.bpm)
-        # Every window is shown under one of the pad's four reflections, chosen
-        # at random. A held-out window is never mirrored, so validation figures
-        # stay comparable across runs.
+        # Every window is shown under one of the pad's four reflections, chosen at random. A
+        # held-out window is never mirrored, so validation figures stay comparable across runs.
         mirror = MIRRORS[0 if self.validation else int(self.rng.integers(len(MIRRORS)))]
         inside = (slots >= start) & (slots < start + WINDOW_SLOTS)
         local = slots[inside] - start

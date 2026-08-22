@@ -1,8 +1,8 @@
 """
 Loaders for the StepMania simfile family.
 
-Timing conversions follow :mod:`smlab.timing`, whose sign conventions were read
-out of the StepMania source rather than assumed.
+Timing conversions follow :mod:`smlab.timing`, whose sign conventions were read out of the StepMania
+source rather than assumed.
 """
 
 from __future__ import annotations
@@ -195,8 +195,8 @@ def _dwi_notes_to_sm(stream: str) -> str:
     """
     Convert a DWI note stream into ``.sm`` measure text.
 
-    The result is rasterised onto a 48th-note grid, which represents every
-    subdivision DWI can express apart from 192nd notes.
+    The result is rasterised onto a 48th-note grid, which represents every subdivision DWI can
+    express apart from 192nd notes.
 
     Parameters
     ----------
@@ -287,8 +287,8 @@ def _dwi_timing(tags: Sequence[MSDTag], path: Path) -> TimingData:
     # NotesLoaderDWI.cpp:629 computes OFFSET as -GAP/1000.
     offset = gap_ms_to_offset(parse_float(_text(tags, 'GAP')))
     bpms = [BPMSegment(0.0, bpm)]
-    # Change and freeze beats are indexed in quarter notes, and freeze
-    # durations are expressed in milliseconds.
+    # Change and freeze beats are indexed in quarter notes, and freeze durations are expressed in
+    # milliseconds.
     bpms.extend(
         BPMSegment(beat / 4.0, value)
         for beat, value in parse_beat_value_list(_text(tags, 'CHANGEBPM'))
@@ -334,8 +334,8 @@ def _sm_charts(tags: Sequence[MSDTag]) -> Iterator[Chart]:
     """
     Yield the charts declared by a ``.sm`` file.
 
-    The format packs chart metadata into the first five colon-separated fields
-    ahead of the note data.
+    The format packs chart metadata into the first five colon-separated fields ahead of the note
+    data.
 
     Parameters
     ----------
@@ -362,8 +362,8 @@ def _ssc_charts(tags: Sequence[MSDTag]) -> Iterator[Chart]:
     """
     Yield the charts declared by an ``.ssc`` file.
 
-    Chart metadata accumulates from the enclosing ``#NOTEDATA`` block until that
-    block's note data arrives.
+    Chart metadata accumulates from the enclosing ``#NOTEDATA`` block until that block's note data
+    arrives.
 
     Parameters
     ----------
@@ -446,8 +446,7 @@ def _load_sm_ssc(path: Path, text: str, *, is_ssc: bool) -> Simfile:
     text : str
         The decoded file contents.
     is_ssc : bool
-        Whether to apply ``.ssc`` semantics, in which charts are split into
-        ``#NOTEDATA`` blocks.
+        Whether to apply ``.ssc`` semantics, in which charts are split into ``#NOTEDATA`` blocks.
 
     Returns
     -------

@@ -1,11 +1,10 @@
 """
 Audio loading and onset-envelope extraction.
 
-Onset envelopes are computed from explicit parameter sets rather than one
-default, because the three jobs they serve pull in opposite directions. Tempo
-estimation wants a long, smooth window; locating the beat phase wants a short
-window that localises transients sharply; separating beats from off-beats wants
-frequency resolution in the bass band.
+Onset envelopes are computed from explicit parameter sets rather than one default, because the three
+jobs they serve pull in opposite directions. Tempo estimation wants a long, smooth window; locating
+the beat phase wants a short window that localises transients sharply; separating beats from
+off-beats wants frequency resolution in the bass band.
 """
 
 from __future__ import annotations
@@ -40,15 +39,13 @@ DEFAULT_SAMPLE_RATE = 22050
 """
 Sample rate used for timing analysis.
 
-Percussive onsets are well resolved here and it halves the decode cost relative
-to full-rate audio.
+Percussive onsets are well resolved here and it halves the decode cost relative to full-rate audio.
 
 :meta hide-value:
 """
 DEFAULT_HOP_LENGTH = 128
 """
-Hop length for onset envelopes, giving about 5.8 ms per frame at
-:data:`DEFAULT_SAMPLE_RATE`.
+Hop length for onset envelopes, giving about 5.8 ms per frame at :data:`DEFAULT_SAMPLE_RATE`.
 
 :meta hide-value:
 """
@@ -61,8 +58,8 @@ DEFAULT_N_MELS = 64
 """
 Mel bands the onset detector aggregates over.
 
-librosa's default of 128 leaves many filters empty at short window lengths,
-which silently degrades the envelope, so a lower count is used throughout.
+librosa's default of 128 leaves many filters empty at short window lengths, which silently degrades
+the envelope, so a lower count is used throughout.
 
 :meta hide-value:
 """

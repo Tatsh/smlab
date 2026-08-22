@@ -94,8 +94,8 @@ def normalize_difficulty(value: str) -> str:
     """
     Map a difficulty name onto its canonical spelling.
 
-    Packs disagree on capitalisation, so ``challenge`` and ``Challenge`` must
-    not become separate conditioning classes.
+    Packs disagree on capitalisation, so ``challenge`` and ``Challenge`` must not become separate
+    conditioning classes.
 
     Parameters
     ----------
@@ -154,10 +154,9 @@ class Chart:
         """
         Yield the non-empty note rows of this chart.
 
-        A measure spans :data:`~smlab.timing.BEATS_PER_MEASURE` beats and is
-        subdivided into however many rows it contains, which is how StepMania
-        encodes quantisation: four rows are quarter notes, sixteen rows are
-        sixteenth notes, and so on.
+        A measure spans :data:`~smlab.timing.BEATS_PER_MEASURE` beats and is subdivided into however
+        many rows it contains, which is how StepMania encodes quantisation: four rows are quarter
+        notes, sixteen rows are sixteenth notes, and so on.
 
         Yields
         ------
@@ -200,8 +199,8 @@ class Simfile:
     """
     Whether the file actually carried an offset tag.
 
-    Many official arcade rips omit it entirely, so a zero offset from such a
-    file is an absent label rather than a human-verified sync point.
+    Many official arcade rips omit it entirely, so a zero offset from such a file is an absent label
+    rather than a human-verified sync point.
     """
     sample_length: float = 0.0
     """The ``#SAMPLELENGTH`` tag in seconds."""
@@ -218,9 +217,8 @@ class Simfile:
         """
         Resolve the audio file belonging to this simfile.
 
-        The ``#MUSIC`` tag is matched case-insensitively because packs
-        frequently disagree with the filesystem, and any audio file in the song
-        directory is used as a fallback.
+        The ``#MUSIC`` tag is matched case-insensitively because packs frequently disagree with the
+        filesystem, and any audio file in the song directory is used as a fallback.
 
         Returns
         -------

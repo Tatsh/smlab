@@ -1,10 +1,9 @@
 """
 Access to the trained models shipped inside the package.
 
-The checkpoints total about seven megabytes, which is small enough to bundle so
-that an installed copy generates charts without first needing a corpus, a
-preprocessing pass, and a training run. Assets are read through
-:py:mod:`importlib.resources` rather than by path arithmetic, so they remain
+The checkpoints total about seven megabytes, which is small enough to bundle so that an installed
+copy generates charts without first needing a corpus, a preprocessing pass, and a training run.
+Assets are read through :py:mod:`importlib.resources` rather than by path arithmetic, so they remain
 reachable when the package is installed as a zip.
 """
 
@@ -110,8 +109,7 @@ def load_state_dict(
     name : str
         Asset file name, also the file name looked for inside ``override``.
     override : :py:class:`~pathlib.Path` | None
-        Directory holding locally trained checkpoints, or ``None`` to use the
-        bundled models.
+        Directory holding locally trained checkpoints, or ``None`` to use the bundled models.
     device : :py:class:`~torch.device`
         Device the tensors are mapped onto.
 

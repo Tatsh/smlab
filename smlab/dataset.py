@@ -1,12 +1,10 @@
 """
 Feature extraction and training-example construction.
 
-Features are built in *beat space* rather than wall-clock frame space. Once the
-tempo and offset are known, the spectrogram is resampled onto a musical grid of
-:data:`SUBDIVISIONS_PER_BEAT` slots per beat, which makes every prediction land
-on a legal note position by construction, renders a sixteenth-note run
-identical at any tempo, and represents the rhythmic vocabulary DDR actually
-uses.
+Features are built in *beat space* rather than wall-clock frame space. Once the tempo and offset are
+known, the spectrogram is resampled onto a musical grid of :data:`SUBDIVISIONS_PER_BEAT` slots per
+beat, which makes every prediction land on a legal note position by construction, renders a
+sixteenth-note run identical at any tempo, and represents the rhythmic vocabulary DDR actually uses.
 """
 
 from __future__ import annotations
@@ -50,8 +48,8 @@ SUBDIVISIONS_PER_BEAT = 12
 """
 Grid slots per beat.
 
-Twelve represents quarter, eighth, twelfth, sixteenth, twenty-fourth, and
-forty-eighth notes exactly, which covers essentially all DDR charting.
+Twelve represents quarter, eighth, twelfth, sixteenth, twenty-fourth, and forty-eighth notes
+exactly, which covers essentially all DDR charting.
 
 :meta hide-value:
 """
@@ -117,8 +115,7 @@ def difficulty_index(name: str) -> int:
     Returns
     -------
     int
-        Position within :data:`~smlab.chart.DIFFICULTIES`, or the ``Edit`` slot
-        when unrecognised.
+        Position within :data:`~smlab.chart.DIFFICULTIES`, or the ``Edit`` slot when unrecognised.
     """
     try:
         return DIFFICULTIES.index(name)
@@ -132,8 +129,8 @@ def beat_features(
     """
     Resample audio onto the beat grid.
 
-    Each slot aggregates the spectrogram frames that fall inside it, so the
-    resulting sequence is indexed by musical position rather than by time.
+    Each slot aggregates the spectrogram frames that fall inside it, so the resulting sequence is
+    indexed by musical position rather than by time.
 
     Parameters
     ----------
@@ -169,8 +166,8 @@ def beat_features(
             break
         window = mel_db[:, start:stop]
         features[index, :N_MELS] = window.mean(axis=1)
-        # The envelope always holds at least one frame and the stop edge is
-        # forced past the start, so this slice never comes back empty.
+        # The envelope always holds at least one frame and the stop edge is forced past the start,
+        # so this slice never comes back empty.
         onset_window = envelope[min(start, len(envelope) - 1) : max(stop, start + 1)]
         features[index, N_MELS] = onset_window.mean()
         features[index, N_MELS + 1] = onset_window.max()
@@ -181,8 +178,8 @@ def chart_targets(chart: Chart, slot_count: int) -> ChartTargets:
     """
     Convert a chart's note rows onto the beat grid.
 
-    Rows that do not land on the grid are snapped to the nearest slot, which
-    only affects the rare sixty-fourth notes the grid cannot express.
+    Rows that do not land on the grid are snapped to the nearest slot, which only affects the rare
+    sixty-fourth notes the grid cannot express.
 
     Parameters
     ----------
@@ -248,8 +245,8 @@ def measure_position(slot_count: int) -> NDArray[np.int64]:
     """
     Return each slot's position within its measure.
 
-    Charting convention is strongly tied to metric position, so the models are
-    told where in the bar each slot sits.
+    Charting convention is strongly tied to metric position, so the models are told where in the bar
+    each slot sits.
 
     Parameters
     ----------

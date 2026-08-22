@@ -1,16 +1,15 @@
 """
 Training for the downbeat phase model.
 
-Labels are free. A song with a declared constant tempo and a declared offset
-tells us exactly where its downbeats fall, so every excerpt of it is a labelled
-example and the label is whatever phase that excerpt starts at. Folding a
-different excerpt, or folding from a different starting point, produces another
-example of the same song at another phase, which is what makes 794 usable songs
+Labels are free. A song with a declared constant tempo and a declared offset tells us exactly where
+its downbeats fall, so every excerpt of it is a labelled example and the label is whatever phase
+that excerpt starts at. Folding a different excerpt, or folding from a different starting point,
+produces another example of the same song at another phase, which is what makes 794 usable songs
 enough to train on.
 
-Only songs whose tempo is constant, whose offset is declared rather than
-guessed, and which carry no stops are used. Anything else has a beat grid that
-either moves or was never authored, and would teach the model the wrong answer.
+Only songs whose tempo is constant, whose offset is declared rather than guessed, and which carry no
+stops are used. Anything else has a beat grid that either moves or was never authored, and would
+teach the model the wrong answer.
 """
 
 from __future__ import annotations
@@ -73,9 +72,8 @@ class OffsetTrainingConfig:
     """
     How much audio each folded profile covers.
 
-    Long enough that a fold averages over many bars, short enough that a tempo
-    estimate a fraction of a beat per minute out has not yet drifted a whole
-    bin across the excerpt.
+    Long enough that a fold averages over many bars, short enough that a tempo estimate a fraction
+    of a beat per minute out has not yet drifted a whole bin across the excerpt.
     """
     learning_rate: float = 2e-3
     """Peak learning rate."""
@@ -130,8 +128,8 @@ def build_envelope_cache(records: Sequence[dict[str, object]], destination: Path
         if position and position % _PROGRESS_EVERY == 0:
             log.info('  %d of %d.', position, len(keepers))
         audio = Path(str(record['audio']))
-        # A stable digest, not the built-in hash: that is salted per process,
-        # so a resumed run would miss every file it had already written.
+        # A stable digest, not the built-in hash: that is salted per process, so a resumed run
+        # would miss every file it had already written.
         digest = hashlib.sha1(str(audio).encode(), usedforsecurity=False).hexdigest()[:16]
         target = destination / f'{digest}.npz'
         if target.is_file():
@@ -231,16 +229,16 @@ class FoldedProfiles(Dataset[tuple[torch.Tensor, torch.Tensor]]):
             rate = float(data['rate'])
         span = int(self.config.excerpt_seconds * rate)
         room = max(envelopes.shape[1] - span, 1)
-        # A held-out song is always folded from the same place, so its score
-        # does not wander between runs. A training song is folded from a fresh
-        # place each time, which is where the extra examples come from.
+        # A held-out song is always folded from the same place, so its score does not wander
+        # between runs. A training song is folded from a fresh place each time, which is where the
+        # extra examples come from.
         start = (index * 7919) % room if self.validation else int(self.rng.integers(room))
         excerpt = envelopes[:, start : start + span]
         seconds = start / rate
         profile = fold_profile(excerpt, rate, bpm, start=-seconds)
-        # Folding an excerpt beginning `seconds` into the song is the same as
-        # folding from zero, so the label is just where the downbeat sits in the
-        # bar. The excerpt's own start does not move it.
+        # Folding an excerpt beginning `seconds` into the song is the same as folding from zero, so
+        # the label is just where the downbeat sits in the bar. The excerpt's own start does not
+        # move it.
         period = BEATS_PER_MEASURE * 60.0 / bpm
         phase = int(np.floor(((-offset) % period) / period * PHASE_BINS)) % PHASE_BINS
         return torch.from_numpy(profile), torch.tensor(phase, dtype=torch.long)

@@ -1,16 +1,13 @@
 """
 Fetching trained weights that are too large to ship inside the wheel.
 
-The chart model is 152 MB as float32, which does not belong in a package, so it
-is downloaded once and cached. Where it is downloaded *from* is deliberately
-configurable: the weights are derived from a personal simfile library, so
-whoever trains a set decides where, or whether, to publish it.
+The chart model is 152 MB as float32, which does not belong in a package, so it is downloaded once
+and cached. Where it is downloaded *from* is deliberately configurable: the weights are derived from
+a personal simfile library, so whoever trains a set decides where, or whether, to publish it.
 
-Resolution order is local then remote. A directory of locally trained
-checkpoints always wins, so retraining never has to fight the cache. Small
-models that still ship inside the wheel are read through
-:py:mod:`smlab.resources` instead; this module covers only the ones too large
-to bundle.
+Resolution order is local then remote. A directory of locally trained checkpoints always wins, so
+retraining never has to fight the cache. Small models that still ship inside the wheel are read
+through :py:mod:`smlab.resources` instead; this module covers only the ones too large to bundle.
 """
 
 from __future__ import annotations
@@ -38,13 +35,13 @@ __all__ = (
 log = logging.getLogger(__name__)
 
 CHART_WEIGHTS = 'chart.pt'
-OFFSET_WEIGHTS = 'offset.pt'
-"""
-File the downbeat phase model is published under.
+"""File name of the chart model checkpoint.
 
 :meta hide-value:
 """
-"""File name of the chart model checkpoint.
+OFFSET_WEIGHTS = 'offset.pt'
+"""
+File the downbeat phase model is published under.
 
 :meta hide-value:
 """
@@ -52,8 +49,8 @@ DEFAULT_REPOSITORY = 'tatsh/smlab'
 """
 Hugging Face repository consulted when nothing else supplies the weights.
 
-Override it with :data:`REPOSITORY_VARIABLE` rather than editing this, so a
-different corpus can publish its own without patching the package.
+Override it with :data:`REPOSITORY_VARIABLE` rather than editing this, so a different corpus can
+publish its own without patching the package.
 
 :meta hide-value:
 """
@@ -66,8 +63,8 @@ REVISION_VARIABLE = 'SMLAB_WEIGHTS_REVISION'
 """
 Environment variable pinning a revision.
 
-Pinning matters because retraining changes the weights while the file name
-stays the same; a tag is what makes a result reproducible.
+Pinning matters because retraining changes the weights while the file name stays the same; a tag is
+what makes a result reproducible.
 
 :meta hide-value:
 """
@@ -187,11 +184,9 @@ def resolve_weights(
     name : str
         Checkpoint file name.
     override : :py:class:`~pathlib.Path` | None
-        Directory of locally trained checkpoints, which wins over everything
-        else.
+        Directory of locally trained checkpoints, which wins over everything else.
     allow_download : bool
-        Whether a missing checkpoint may be fetched from the configured
-        repository.
+        Whether a missing checkpoint may be fetched from the configured repository.
 
     Returns
     -------

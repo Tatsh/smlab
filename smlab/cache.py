@@ -93,8 +93,7 @@ def _song_arrays(record: SongRecord) -> dict[str, NDArray[np.generic]] | None:
     Returns
     -------
     dict[str, :py:class:`~numpy.ndarray`] | None
-        Arrays keyed by cache entry name, or ``None`` when the song is
-        unusable.
+        Arrays keyed by cache entry name, or ``None`` when the song is unusable.
     """
     try:
         simfile = load_simfile(Path(record['simfile']))
@@ -128,8 +127,8 @@ def write_song_cache(item: tuple[SongRecord, str]) -> str | None:
     Parameters
     ----------
     item : tuple[SongRecord, str]
-        The manifest record and the cache root, passed as one argument so that
-        the function can be mapped across a process pool.
+        The manifest record and the cache root, passed as one argument so that the function can be
+        mapped across a process pool.
 
     Returns
     -------
@@ -143,8 +142,8 @@ def write_song_cache(item: tuple[SongRecord, str]) -> str | None:
     if (arrays := _song_arrays(record)) is None:
         return None
     destination.parent.mkdir(parents=True, exist_ok=True)
-    # numpy's stub declares keyword parameters of its own alongside the array
-    # keywords, so an unpacked mapping of arrays cannot be expressed.
+    # numpy's stub declares keyword parameters of its own alongside the array keywords, so an
+    # unpacked mapping of arrays cannot be expressed.
     np.savez_compressed(destination, **arrays)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     return record['simfile']
 

@@ -1,26 +1,23 @@
 """
 Learned recovery of the downbeat phase.
 
-Tempo and phase are separate problems and only the second is solved here. Given
-a tempo, the beat grid is fixed up to where it starts, and that remaining
-degree of freedom is what ``#OFFSET`` encodes.
+Tempo and phase are separate problems and only the second is solved here. Given a tempo, the beat
+grid is fixed up to where it starts, and that remaining degree of freedom is what ``#OFFSET``
+encodes.
 
-The heuristic in :py:mod:`smlab.tempo` chooses the phase by taking the loudest
-point of a folded onset envelope. That criterion is wrong in a way no amount of
-tuning fixes: a downbeat is not the loudest moment in the bar. It is where the
-bass lands, where the harmony turns over, where the phrase begins. A hi-hat
-playing straight eighths is often louder than the kick, and the grid then locks
-onto the off-beat. Measured over 154 songs whose tempo was recovered correctly,
-that heuristic lands within 30 ms of the authored offset 59.7 per cent of the
-time, puts 13.6 per cent of songs a clean half-beat out, and gets the measure
-right in only 45.5 per cent of cases.
+The heuristic in :py:mod:`smlab.tempo` chooses the phase by taking the loudest point of a folded
+onset envelope. That criterion is wrong in a way no amount of tuning fixes: a downbeat is not the
+loudest moment in the bar. It is where the bass lands, where the harmony turns over, where the
+phrase begins. A hi-hat playing straight eighths is often louder than the kick, and the grid then
+locks onto the off-beat. Measured over 154 songs whose tempo was recovered correctly, that heuristic
+lands within 30 ms of the authored offset 59.7 per cent of the time, puts 13.6 per cent of songs a
+clean half-beat out, and gets the measure right in only 45.5 per cent of cases.
 
-What the model sees is the same fold, split into frequency bands so that a kick
-and a hi-hat are not summed into one number, and it is asked which of the 96
-positions in the bar the downbeat occupies. It is built only from circular
-convolutions, so shifting the input shifts the answer by exactly as much: the
-network cannot memorise that downbeats tend to land at a particular bin, and
-every window of every song teaches it something about every phase.
+What the model sees is the same fold, split into frequency bands so that a kick and a hi-hat are not
+summed into one number, and it is asked which of the 96 positions in the bar the downbeat occupies.
+It is built only from circular convolutions, so shifting the input shifts the answer by exactly as
+much: the network cannot memorise that downbeats tend to land at a particular bin, and every window
+of every song teaches it something about every phase.
 """
 
 from __future__ import annotations
@@ -56,9 +53,8 @@ PHASE_BINS = 96
 """
 Positions in a bar the downbeat is chosen from.
 
-Twenty-four per beat, matching the fine grid the chart model works on. At 128
-BPM one bin spans 19.5 ms, comfortably below the roughly 30 ms at which a
-mis-timed chart starts to feel wrong.
+Twenty-four per beat, matching the fine grid the chart model works on. At 128 BPM one bin spans
+19.5 ms, comfortably below the roughly 30 ms at which a mis-timed chart starts to feel wrong.
 
 :meta hide-value:
 """
@@ -66,8 +62,8 @@ EXCERPT_SECONDS = 25.0
 """
 Seconds of audio one folded profile covers.
 
-Long enough to average over many bars, short enough that a tempo estimate a
-fraction of a beat per minute out has not drifted a whole bin by the end.
+Long enough to average over many bars, short enough that a tempo estimate a fraction of a beat per
+minute out has not drifted a whole bin by the end.
 
 :meta hide-value:
 """
@@ -77,15 +73,14 @@ BAND_EDGES = (0.0, 150.0, 500.0, 2000.0, 11025.0)
 """
 Frequency band edges in hertz, one onset envelope taken between each pair.
 
-Summing the spectrum into a single envelope is what lets a loud hi-hat outvote
-a kick. Kept apart, the lowest band carries the kick and bass that mark the
-downbeat and the highest carries the cymbals that mislead.
+Summing the spectrum into a single envelope is what lets a loud hi-hat outvote a kick. Kept apart,
+the lowest band carries the kick and bass that mark the downbeat and the highest carries the cymbals
+that mislead.
 
-These have to be genuine slices. Passing ``fmax`` alone to a flux detector
-gives nested low-pass bands rather than disjoint ones, and asking for a full
-mel filterbank below 150 Hz produces filters so narrow that every one of them
-is empty — a band that is identically zero and contributes nothing at all,
-which is what the first version of this did.
+These have to be genuine slices. Passing ``fmax`` alone to a flux detector gives nested low-pass
+bands rather than disjoint ones, and asking for a full mel filterbank below 150 Hz produces filters
+so narrow that every one of them is empty — a band that is identically zero and contributes nothing
+at all, which is what the first version of this did.
 
 :meta hide-value:
 """
@@ -96,9 +91,9 @@ _DILATIONS = (1, 2, 4, 8, 16)
 """
 Dilations of the stacked convolutions.
 
-With a kernel of five these reach 125 bins, so every position in the bar sees
-the whole of it. A downbeat is only recognisable relative to the rest of the
-measure, so a receptive field short of that would be guessing.
+With a kernel of five these reach 125 bins, so every position in the bar sees the whole of it. A
+downbeat is only recognisable relative to the rest of the measure, so a receptive field short of
+that would be guessing.
 
 :meta hide-value:
 """
@@ -124,8 +119,8 @@ def band_envelopes(
     """
     settings = params if params is not None else OnsetParams()
     centres = librosa.mel_frequencies(n_mels=settings.n_mels, fmax=settings.sample_rate / 2)
-    # Channel boundaries as mel-bin indices, so each envelope is flux over one
-    # slice of the spectrum rather than everything below a ceiling.
+    # Channel boundaries as mel-bin indices, so each envelope is flux over one slice of the
+    # spectrum rather than everything below a ceiling.
     channels = [int(np.searchsorted(centres, edge)) for edge in BAND_EDGES]
     channels[-1] = settings.n_mels
     stacked = np.asarray(
@@ -140,9 +135,8 @@ def band_envelopes(
         ),
         dtype=np.float32,
     )
-    # Each band is scaled on its own. Absolute loudness differs enormously
-    # between bands and says nothing about where the downbeat is; the shape
-    # within a band is the whole signal.
+    # Each band is scaled on its own. Absolute loudness differs enormously between bands and says
+    # nothing about where the downbeat is; the shape within a band is the whole signal.
     peak = np.maximum(stacked.max(axis=1, keepdims=True), 1e-6)
     return np.asarray(stacked / peak, dtype=np.float32)
 
@@ -167,8 +161,8 @@ def fold_profile(
     Returns
     -------
     :py:class:`~numpy.ndarray`
-        Profile shaped ``(bands, PHASE_BINS)``, each band scaled to its own
-        peak so that only its shape carries.
+        Profile shaped ``(bands, PHASE_BINS)``, each band scaled to its own peak so that only its
+        shape carries.
     """
     period = BEATS_PER_MEASURE * 60.0 / bpm
     times = np.arange(envelopes.shape[1], dtype=np.float64) / frame_rate - start
@@ -209,9 +203,9 @@ def offset_for_phase(phase: int, bpm: float) -> float:
     """
     Return the offset that puts the downbeat at a bar position.
 
-    Any offset differing by a whole bar describes the same grid, so the
-    representative nearest zero is chosen: beat zero then falls inside the first
-    bar of the audio, which is where simfiles conventionally put it.
+    Any offset differing by a whole bar describes the same grid, so the representative nearest zero
+    is chosen: beat zero then falls inside the first bar of the audio, which is where simfiles
+    conventionally put it.
 
     Parameters
     ----------
@@ -249,10 +243,9 @@ class OffsetModel(nn.Module):
                 nn.GELU(),
             ))
             width = channels
-        # A single channel out, read as one score per bar position. Nothing
-        # here mixes positions except the circular convolutions, so shifting
-        # the profile shifts the scores by the same amount and the model has no
-        # way to prefer a bin for its own sake.
+        # A single channel out, read as one score per bar position. Nothing here mixes positions
+        # except the circular convolutions, so shifting the profile shifts the scores by the same
+        # amount and the model has no way to prefer a bin for its own sake.
         layers.append(nn.Conv1d(width, 1, 1))
         self.stack = nn.Sequential(*layers)
 
@@ -285,11 +278,10 @@ def predict_phase(
     """
     Choose the bar position the downbeat occupies.
 
-    The song is read in excerpts of the length the model was trained on and
-    their distributions averaged. Folding the whole song at once would hand the
-    model a smoother profile than anything it saw in training, and a song that
-    changes character partway would have its sections averaged into each other
-    before the model ever saw them.
+    The song is read in excerpts of the length the model was trained on and their distributions
+    averaged. Folding the whole song at once would hand the model a smoother profile than anything
+    it saw in training, and a song that changes character partway would have its sections averaged
+    into each other before the model ever saw them.
 
     Parameters
     ----------
@@ -338,8 +330,8 @@ def refine_offset(model: OffsetModel, audio: Path, bpm: float) -> tuple[float, f
     Returns
     -------
     tuple[float, float]
-        The offset and how much of the averaged distribution its bin holds,
-        which is a rough confidence.
+        The offset and how much of the averaged distribution its bin holds, which is a rough
+        confidence.
     """
     params = OnsetParams()
     samples = load_audio(audio, sample_rate=params.sample_rate)

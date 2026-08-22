@@ -1,12 +1,11 @@
 """
 Training the shared encoder with both heads.
 
-The headline metric from the first model is deliberately not reported here. An
-area under the curve computed across all slots is dominated by the fact that
-notes fall on beats, which a forty-eight entry lookup table already knows.
-What is reported instead is the same measure computed *within* one metric
-position class, where position carries no information and any discrimination
-must come from the audio.
+The headline metric from the first model is deliberately not reported here. An area under the curve
+computed across all slots is dominated by the fact that notes fall on beats, which a forty-eight
+entry lookup table already knows. What is reported instead is the same measure computed *within* one
+metric position class, where position carries no information and any discrimination must come from
+the audio.
 """
 
 from __future__ import annotations
@@ -72,8 +71,8 @@ def stratified_auc(
     """
     Score discrimination within one metric position class.
 
-    Restricting to slots that share a position removes the metric prior's
-    contribution, so what remains reflects reading the audio.
+    Restricting to slots that share a position removes the metric prior's contribution, so what
+    remains reflects reading the audio.
 
     Parameters
     ----------
@@ -107,9 +106,9 @@ def style_sampler(examples: list[ChartExample]) -> WeightedRandomSampler:
     """
     Draw performance styles evenly rather than as the corpus happens to hold them.
 
-    The corpus is 95% charts danceable with two feet, so uniform sampling would
-    give keyboard and hand-chord charts about three per cent of the gradient
-    updates and their conditioning would go essentially unlearnt.
+    The corpus is 95% charts danceable with two feet, so uniform sampling would give keyboard and
+    hand-chord charts about three per cent of the gradient updates and their conditioning would go
+    essentially unlearnt.
 
     Parameters
     ----------

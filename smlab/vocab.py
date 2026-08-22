@@ -1,10 +1,10 @@
 """
 Vocabulary of note-row patterns.
 
-A row is four panel codes, so the space has ``PANEL_CODES ** 4`` members, but
-real charts use only a small, heavily skewed subset. Treating each observed row
-as one token lets the selection model learn jumps and holds as single decisions
-rather than four independent ones, which is how charters think about them.
+A row is four panel codes, so the space has ``PANEL_CODES ** 4`` members, but real charts use only a
+small, heavily skewed subset. Treating each observed row as one token lets the selection model learn
+jumps and holds as single decisions rather than four independent ones, which is how charters think
+about them.
 """
 
 from __future__ import annotations
@@ -201,11 +201,10 @@ def build_vocabulary(cache_root: Path, *, limit: int = _DEFAULT_LIMIT) -> Vocabu
             continue
         for chart in song.charts:
             counter.update(int(encode_row(row)) for row in cast('np.ndarray', chart['panels']))
-    # The empty row is the commonest pattern in any chart and the one the
-    # selection head must never choose: where the rests go is the placement
-    # head's decision, and a vocabulary entry for silence lets selection
-    # overrule it. Left in, it was taken at 28 per cent of the slots placement
-    # had picked for a note, scattering holes through the chart.
+    # The empty row is the commonest pattern in any chart and the one the selection head must never
+    # choose: where the rests go is the placement head's decision, and a vocabulary entry for
+    # silence lets selection overrule it. Left in, it was taken at 28 per cent of the slots
+    # placement had picked for a note, scattering holes through the chart.
     del counter[EMPTY_ROW]
     log.info('Found %d distinct note-row patterns, excluding the empty row.', len(counter))
     return Vocabulary([pattern for pattern, _ in counter.most_common(limit)])

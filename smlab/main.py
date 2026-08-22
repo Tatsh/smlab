@@ -98,8 +98,8 @@ IMAGE_DIRECTORY = '.images'
 """
 Folder inside a song directory that drawn charts go in.
 
-Named with a leading dot so StepMania's song scanner passes over it rather than
-trying to read the pictures as chart assets.
+Named with a leading dot so StepMania's song scanner passes over it rather than trying to read the
+pictures as chart assets.
 
 :meta hide-value:
 """
@@ -107,8 +107,8 @@ LATENCY_VARIABLE = 'SMLAB_LATENCY'
 """
 Environment variable holding a constant latency correction, in seconds.
 
-Playback latency is a property of a setup, not of a song, so it belongs
-somewhere it can be set once rather than passed on every run.
+Playback latency is a property of a setup, not of a song, so it belongs somewhere it can be set once
+rather than passed on every run.
 
 :meta hide-value:
 """
@@ -123,9 +123,9 @@ DEFAULT_METERS = {
 """
 Difficulty rating used when none is given, on the classic ten-point scale.
 
-The rating conditions the model, so it must follow the difficulty name rather
-than the order the difficulties happen to be requested in. Asking for another
-scale translates these through :py:func:`default_meter`.
+The rating conditions the model, so it must follow the difficulty name rather than the order the
+difficulties happen to be requested in. Asking for another scale translates these through
+:py:func:`default_meter`.
 
 :meta hide-value:
 """
@@ -135,10 +135,9 @@ def default_meter(difficulty: str, scale: int = DEFAULT_SCALE) -> int:
     """
     Return the rating a difficulty defaults to on one scale.
 
-    :py:data:`DEFAULT_METERS` is written on the classic scale, so asking for
-    another one has to translate. Note rate is the common currency: the answer
-    is whichever rating on the requested scale sits closest to the note rate
-    the classic default implies.
+    :py:data:`DEFAULT_METERS` is written on the classic scale, so asking for another one has to
+    translate. Note rate is the common currency: the answer is whichever rating on the requested
+    scale sits closest to the note rate the classic default implies.
 
     Parameters
     ----------
@@ -184,8 +183,8 @@ class _DifficultySpec(click.ParamType[tuple[str, int]]):
         Returns
         -------
         tuple[str, int]
-            Difficulty name and rating, where zero means the default for that
-            difficulty on the chosen scale.
+            Difficulty name and rating, where zero means the default for that difficulty on the
+            chosen scale.
         """
         name, _, rating = value.partition(':')
         match = next((known for known in DIFFICULTIES if known.lower() == name.lower()), None)
@@ -208,9 +207,8 @@ def _load_offset_model(checkpoints: Path | None) -> OffsetModel | None:
     Returns
     -------
     OffsetModel or None
-        The model in evaluation mode, or ``None`` when no weights are to hand.
-        Missing weights are not fatal: the tempo estimator supplies an offset
-        of its own, just a worse one.
+        The model in evaluation mode, or ``None`` when no weights are to hand. Missing weights are
+        not fatal: the tempo estimator supplies an offset of its own, just a worse one.
     """
     try:
         path = resolve_weights(OFFSET_WEIGHTS, checkpoints)
@@ -248,11 +246,10 @@ def _resolve_timing(
     latency : float
         Seconds of constant playback latency to compensate.
     multiply : float
-        Factor to scale the tempo by, for when detection lands on the wrong
-        octave.
+        Factor to scale the tempo by, for when detection lands on the wrong octave.
     phase_model : OffsetModel or None
-        Model used to place the downbeat, or ``None`` to keep the offset the
-        tempo estimator produced.
+        Model used to place the downbeat, or ``None`` to keep the offset the tempo estimator
+        produced.
 
     Returns
     -------
@@ -272,17 +269,16 @@ def _resolve_timing(
             f'Detected {timing.primary_bpm:.3f} BPM, offset '
             f'{timing.offset:+.4f} (confidence {estimate["confidence"]:.2f}).'
         )
-    # The tempo estimator picks its phase by taking the loudest point of a
-    # folded envelope, which is not where a downbeat is. Given the tempo, the
-    # phase model decides that separately and far better, so it replaces the
-    # offset whenever one was not supplied outright.
+    # The tempo estimator picks its phase by taking the loudest point of a folded envelope, which is
+    # not where a downbeat is. Given the tempo, the phase model decides that separately and far
+    # better, so it replaces the offset whenever one was not supplied outright.
     if phase_model is not None and offset is None:
         found, weight = refine_offset(phase_model, audio, timing.primary_bpm)
         timing = TimingData.constant(timing.primary_bpm, found)
         click.echo(f'Placed the downbeat at offset {found:+.4f} (confidence {weight:.2f}).')
     if not math.isclose(multiply, 1.0):
-        # Scaling the tempo leaves beat zero where it is, so the offset carries
-        # over untouched and only the grid spacing changes.
+        # Scaling the tempo leaves beat zero where it is, so the offset carries over untouched and
+        # only the grid spacing changes.
         timing = TimingData.constant(timing.primary_bpm * multiply, timing.offset)
         click.echo(f'Tempo scaled by {multiply:g} to {timing.primary_bpm:.3f} BPM.')
     if shift_beats:
@@ -490,8 +486,7 @@ def _detect_sample_start(checkpoints: Path | None, audio: Path, timing: TimingDa
     Parameters
     ----------
     checkpoints : :py:class:`~pathlib.Path` | None
-        Directory of locally trained checkpoints, or ``None`` for the bundled
-        models.
+        Directory of locally trained checkpoints, or ``None`` for the bundled models.
     audio : :py:class:`~pathlib.Path`
         The audio file, re-read because the preview model uses its own features.
     timing : TimingData

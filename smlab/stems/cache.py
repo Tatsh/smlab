@@ -1,10 +1,9 @@
 """
 Building the stem-based feature cache.
 
-Separation runs on the GPU and feature extraction runs on the processor, so the
-two are pipelined: while one song is being turned into mel bands on worker
-threads, the next is already being separated. Doing them in sequence would
-leave whichever device is idle waiting for the other.
+Separation runs on the GPU and feature extraction runs on the processor, so the two are pipelined:
+while one song is being turned into mel bands on worker threads, the next is already being
+separated. Doing them in sequence would leave whichever device is idle waiting for the other.
 """
 
 from __future__ import annotations
@@ -156,12 +155,11 @@ def build_stem_cache(
         if (arrays := stem_cache_entry(record, model, chosen)) is None:
             return record['simfile'], False
         destination.parent.mkdir(parents=True, exist_ok=True)
-        # Stored uncompressed deliberately. numpy silently ignores mmap_mode on
-        # a compressed archive, so every read would decompress the whole feature
-        # array in order to slice one window out of it. Uncompressed costs twice
-        # the disk and reads a window six times faster.
-        # numpy's stub declares keyword parameters alongside the array keywords,
-        # so an unpacked mapping of arrays cannot be expressed.
+        # Stored uncompressed deliberately. numpy silently ignores mmap_mode on a compressed
+        # archive, so every read would decompress the whole feature array in order to slice one
+        # window out of it. Uncompressed costs twice the disk and reads a window six times faster.
+        # numpy's stub declares keyword parameters alongside the array keywords, so an unpacked
+        # mapping of arrays cannot be expressed.
         np.savez(destination, **arrays)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
         return record['simfile'], True
 

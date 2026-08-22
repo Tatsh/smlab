@@ -1,26 +1,22 @@
 """
 Audio encoder shared by placement and selection.
 
-*Where* a step goes and *which panels* it uses are different questions asked of
-the same music, so both heads read one encoder rather than each learning its
-own view of the audio.
+*Where* a step goes and *which panels* it uses are different questions asked of the same music, so
+both heads read one encoder rather than each learning its own view of the audio.
 
 Three ideas shape it:
 
-* **Difficulty modulates every layer.** A rating does not merely scale how many
-  notes appear; it decides which layer of the music to follow. Beginner charts
-  track the kick, Challenge charts track a drum fill or a vocal line. Feature
-  modulation applies a learnt scale and shift at each block, so the rating can
-  gate whole stems, which concatenating one embedding at the input cannot.
-* **Attention is local at the slot level and global at the measure level.** A
-  song is a few thousand slots, too many for full attention, but only a hundred
-  or so measures. Structure is a measure-scale phenomenon anyway: charters
-  reuse a pattern when the music repeats, so a chorus should be able to attend
-  to the previous chorus.
-* **Placement predicts a correction, not a probability.** The empirical odds of
-  a step given its position in the bar are supplied as a fixed bias, so the
-  network cannot score well by rediscovering that notes fall on beats. It can
-  only earn its parameters by reading the audio.
+* **Difficulty modulates every layer.** A rating does not merely scale how many notes appear; it
+  decides which layer of the music to follow. Beginner charts track the kick, Challenge charts track
+  a drum fill or a vocal line. Feature modulation applies a learnt scale and shift at each block, so
+  the rating can gate whole stems, which concatenating one embedding at the input cannot.
+* **Attention is local at the slot level and global at the measure level.** A song is a few thousand
+  slots, too many for full attention, but only a hundred or so measures. Structure is a
+  measure-scale phenomenon anyway: charters reuse a pattern when the music repeats, so a chorus
+  should be able to attend to the previous chorus.
+* **Placement predicts a correction, not a probability.** The empirical odds of a step given its
+  position in the bar are supplied as a fixed bias, so the network cannot score well by
+  rediscovering that notes fall on beats. It can only earn its parameters by reading the audio.
 """
 
 from __future__ import annotations
@@ -56,20 +52,19 @@ CONDITION_DIMENSION = 128
 :meta hide-value:
 """
 MAX_METER = 21
+"""Highest rating represented, with larger values clamped.
+
+:meta hide-value:
+"""
 MAX_RATE = 16
 """
 Number of note-rate buckets the conditioner knows, one per whole note/second.
 
-The rating alone is a lossy description of how dense a chart is. The classic
-ten-point scale saturates at the top, where charts labelled ten run anywhere
-from 3.5 to 6.9 notes per second, and a keyboard chart runs roughly twice as
-dense as a pad chart carrying the same number. Conditioning on the measured
-rate lets the model learn density directly instead of inferring it from an
-unreliable integer.
-
-:meta hide-value:
-"""
-"""Highest rating represented, with larger values clamped.
+The rating alone is a lossy description of how dense a chart is. The classic ten-point scale
+saturates at the top, where charts labelled ten run anywhere from 3.5 to 6.9 notes per second, and a
+keyboard chart runs roughly twice as dense as a pad chart carrying the same number. Conditioning on
+the measured rate lets the model learn density directly instead of inferring it from an unreliable
+integer.
 
 :meta hide-value:
 """
@@ -82,10 +77,10 @@ STYLES = ('feet', 'hands', 'keyboard')
 """
 How a chart may be performed, in conditioning-index order.
 
-A pad chart is not a keyboard chart with its illegal rows removed; it is
-composed differently, alternating feet and placing jumps on accents. Telling
-the network which idiom it is writing in lets it learn each one, rather than
-having a decode-time filter mangle patterns it never knew were disallowed.
+A pad chart is not a keyboard chart with its illegal rows removed; it is composed differently,
+alternating feet and placing jumps on accents. Telling the network which idiom it is writing in lets
+it learn each one, rather than having a decode-time filter mangle patterns it never knew were
+disallowed.
 
 :meta hide-value:
 """
@@ -161,8 +156,8 @@ class FiLMConditioner(nn.Module):
         Returns
         -------
         :py:class:`~torch.Tensor`
-            Modulation shaped ``(batch, layers, 2, width)``, holding a scale and
-            a shift for each block.
+            Modulation shaped ``(batch, layers, 2, width)``, holding a scale and a shift for each
+            block.
         """
         combined = torch.cat(
             [
@@ -381,10 +376,9 @@ class AudioEncoder(nn.Module):
         """
         Spread measure context back across the slots it covers.
 
-        A song rarely ends on a bar line, so the final measure is usually
-        partial and pooling discards it. Its slots still need context, which the
-        preceding measure supplies. Training never exercises this because every
-        window is a whole number of measures.
+        A song rarely ends on a bar line, so the final measure is usually partial and pooling
+        discards it. Its slots still need context, which the preceding measure supplies. Training
+        never exercises this because every window is a whole number of measures.
 
         Parameters
         ----------
