@@ -1,0 +1,91 @@
+jobs:
+  build:
+    container:
+      image: 'ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-24.08'
+      options: '--privileged'
+    permissions:
+      attestations: 'write'
+      contents: 'read'
+      id-token: 'write'
+    runs-on: '${{ matrix.system.image }}'
+    steps:
+      - uses: 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
+        with:
+          persist-credentials: false
+      - id: 'flatpak_bundle'
+        name: 'Set Flatpak bundle filename'
+        run: |
+          version=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "filename=sh.tat.smlab-${version}-${{ matrix.system.arch }}.flatpak" >> "$GITHUB_OUTPUT"
+      - name: 'Build Flatpak'
+        uses: 'flatpak/flatpak-github-actions/flatpak-builder@401fe28a8384095fc1531b9d320b292f0ee45adb'
+        with:
+          arch: '${{ matrix.system.arch }}'
+          bundle: '${{ steps.flatpak_bundle.outputs.filename }}'
+          manifest-path: 'sh.tat.smlab.yml'
+      - name: 'Upload Artifacts'
+        uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a'
+        with:
+          if-no-files-found: 'error'
+          name: 'sh.tat.smlab-${{ steps.flatpak_bundle.outputs.version }}-${{ matrix.system.arch }}'
+          path: '${{ steps.flatpak_bundle.outputs.filename }}'
+      - name: 'Attest'
+        uses: 'actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6'
+        with:
+          subject-path: '${{ steps.flatpak_bundle.outputs.filename }}'
+    strategy:
+      matrix:
+        system:
+          - arch: 'x86_64'
+            image: 'ubuntu-latest'
+          - arch: 'aarch64'
+            image: 'ubuntu-24.04-arm'
+  release-assets:
+    concurrency:
+      group: 'release-assets-${{ github.ref }}'
+      queue: 'max'
+    if: "github.ref_type == 'tag'"
+    needs:
+      - 'build'
+    permissions:
+      contents: 'write'
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Download build artifacts'
+        uses: 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c'
+        with:
+          merge-multiple: true
+          path: '_release_assets'
+          pattern: 'sh.tat.smlab-*'
+      - env:
+          GH_REPO: '${{ github.repository }}'
+          GH_TOKEN: '${{ github.token }}'
+        name: 'Create or update draft release'
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 ||
+            gh release create "$GITHUB_REF_NAME" --draft --notes ''
+          shopt -s nullglob
+          assets=(_release_assets/*)
+          if [ -z "${assets[0]-}" ]; then
+            echo 'No build artifacts to attach.'
+            exit 0
+          fi
+          gh release upload "$GITHUB_REF_NAME" "${assets[@]}" --clobber
+        shell: 'bash'
+name: 'Flatpak'
+'on':
+  push:
+    branches:
+      - 'master'
+    paths:
+      - 'smlab/**'
+      - '.github/workflows/flatpak.yml'
+      - 'sh.tat.smlab.yml'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'poetry.lock'
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch: null
+permissions: {}

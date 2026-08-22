@@ -1,0 +1,129 @@
+{
+  "_wiswa": {
+    "commandLine": "wiswa -d",
+    "lastRun": "2026-08-22T13:08:50Z",
+    "version": "10513cd"
+  },
+  "contributors": ["Andrew Udvare <audvare@gmail.com>"],
+  "cspell": {
+    "cache": {
+      "useCache": true
+    },
+    "dictionaryDefinitions": [
+      {
+        "name": "main",
+        "path": ".vscode/dictionary.txt"
+      }
+    ],
+    "enableFileTypes": {
+      "*": true
+    },
+    "enableGlobDot": true,
+    "files": ["**"],
+    "ignorePaths": [
+      "*.1",
+      "*.har",
+      "*.lock",
+      ".git/**",
+      ".yarn/**/*.cjs",
+      ".vscode/extensions.json",
+      "dist/**",
+      "man/**"
+    ],
+    "language": "en-GB",
+    "languageSettings": [
+      {
+        "dictionaries": ["main"],
+        "languageId": "*"
+      }
+    ],
+    "useGitignore": true
+  },
+  "description": "Generate StepMania dance-single charts from audio using machine learning.",
+  "devDependencies": {
+    "@prettier/plugin-xml": "^3.4.2",
+    "cspell": "^10.0.1",
+    "markdownlint-cli2": "^0.23.2",
+    "prettier": "^3.9.6",
+    "prettier-plugin-ini": "^1.3.0",
+    "prettier-plugin-sort-json": "^4.2.0",
+    "prettier-plugin-toml": "^2.0.6",
+    "pyright": "^1.1.413"
+  },
+  "files": ["LICENSE.txt", "README.md", "man/smlab.1"],
+  "homepage": "https://tatsh.github.io/smlab/",
+  "keywords": [
+    "audio",
+    "command line",
+    "dance dance revolution",
+    "machine learning",
+    "simfile",
+    "stepmania"
+  ],
+  "license": "MIT",
+  "markdownlint-cli2": {
+    "config": {
+      "MD024": {
+        "siblings_only": true
+      },
+      "MD033": {
+        "allowed_elements": ["kbd"]
+      },
+      "default": true,
+      "line-length": {
+        "code_blocks": false,
+        "line_length": 100,
+        "tables": false
+      }
+    },
+    "gitignore": true,
+    "globs": ["**/*.md", "**/*.mdc"],
+    "noBanner": true,
+    "showFound": true
+  },
+  "name": "smlab",
+  "packageManager": "yarn@4.18.0",
+  "prettier": {
+    "endOfLine": "lf",
+    "iniSpaceAroundEquals": true,
+    "jsonRecursiveSort": true,
+    "overrides": [
+      {
+        "files": ["*.json.dist", "package.json"],
+        "options": {
+          "parser": "json"
+        }
+      }
+    ],
+    "plugins": [
+      "@prettier/plugin-xml",
+      "prettier-plugin-ini",
+      "prettier-plugin-sort-json",
+      "prettier-plugin-toml"
+    ],
+    "printWidth": 100,
+    "reorderKeys": true,
+    "singleQuote": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Tatsh/smlab.git"
+  },
+  "scripts": {
+    "check-formatting": "yarn prettier --check --ignore-unknown . && yarn markdownlint-cli2 --config package.json --configPointer /markdownlint-cli2 && uv run ruff format --check .",
+    "check-spelling": "cspell --no-progress",
+    "dict:update": "rm -f .vscode/dictionary.txt && cspell lint --no-progress --no-summary --unique --words-only | tr '[:upper:]' '[:lower:]' | sort -u > .vscode/dictionary.txt",
+    "format": "yarn prettier --write --ignore-unknown . && yarn markdownlint-cli2 --config package.json --configPointer /markdownlint-cli2 --fix && uv run ruff format .",
+    "gen-docs": "uv run sphinx-build --fresh-env --fail-on-warning --builder html --doctree-dir docs/_build/doctrees --define language=en docs docs/_build/html",
+    "gen-manpage": "uv run sphinx-build --fresh-env --fail-on-warning --builder man --doctree-dir docs/_build/doctrees --define language=en docs man",
+    "mypy": "uv run mypy",
+    "qa": "yarn mypy . && yarn pyright && uv run ty check && yarn ruff . && yarn check-spelling && yarn check-formatting",
+    "regen": "uv run wiswa",
+    "ruff": "uv run ruff check",
+    "ruff:fix": "uv run ruff check --fix",
+    "test": "uv run pytest",
+    "test:cov": "yarn test --cov . --cov-branch --cov-report html --cov-report term-missing:skip-covered",
+    "ty": "uv run ty check"
+  },
+  "version": "0.0.0"
+}

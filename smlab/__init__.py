@@ -1,0 +1,6 @@
+"""Generate StepMania dance-single charts from audio."""
+
+from __future__ import annotations
+
+__all__ = ()
+__version__ = '0.0.0'
