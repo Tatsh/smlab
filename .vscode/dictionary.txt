@@ -79,6 +79,7 @@ dunder
 elif
 encoderq
 endswith
+equivariance
 equivariant
 esac
 esbenp
@@ -167,6 +168,7 @@ mkػs
 mĽvj
 mmۻk
 modindex
+mmap
 monkeypatch
 mrټm
 msλf
@@ -220,7 +222,6 @@ pypi
 pyproject
 pytest
 pythonhosted
-pytorch
 pʼbu
 pмwd
 qcƽg
@@ -295,6 +296,7 @@ tickcount
 tickcounts
 timesignatures
 titletranslit
+toctree
 tomllib
 tomlq
 tonumber

@@ -1,0 +1,588 @@
+.\" Man page generated from reStructuredText.
+.
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.TH "SMLAB" "1" "Aug 22, 2026" "0.0.0" "smlab"
+.SH NAME
+smlab \- smlab v0.0.0
+.SH COMMAND REFERENCE
+.SS smlab
+.sp
+Generate StepMania dance\-single charts from audio.
+.sp
+Usage
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.EX
+smlab [OPTIONS] COMMAND [ARGS]...
+.EE
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-d, \-\-debug
+Enable verbose output.
+.UNINDENT
+.SS analyze
+.sp
+Report timing and physical demands of an existing simfile.
+.sp
+Usage
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.EX
+smlab analyze [OPTIONS] SIMFILE
+.EE
+.UNINDENT
+.UNINDENT
+.sp
+Arguments
+.INDENT 0.0
+.TP
+.B SIMFILE
+Required argument
+.UNINDENT
+.SS envelopes
+.sp
+Build the banded onset envelopes the offset model trains on.
+.sp
+Usage
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.EX
+smlab envelopes [OPTIONS]
+.EE
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-m, \-\-manifest <manifest>
+Manifest to read.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-o, \-\-output <output>
+Cache directory to fill.
+.UNINDENT
+.SS generate
+.sp
+Generate a song folder holding a simfile and a copy of the audio.
+.sp
+Usage
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.EX
+smlab generate [OPTIONS] AUDIO
+.EE
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-o, \-\-output\-dir <output_dir>
+Directory the song folder is created inside, usually a pack.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-T, \-\-title <title>
+Song title, which also names the song folder.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-A, \-\-artist <artist>
+Song artist.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-S, \-\-subtitle <subtitle>
+Song subtitle.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-G, \-\-genre <genre>
+Song genre.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-C, \-\-credit <credit>
+Chart author. Defaults to the current user.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-title\-translit <title_translit>
+Romanised title.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-subtitle\-translit <subtitle_translit>
+Romanised subtitle.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-artist\-translit <artist_translit>
+Romanised artist.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-banner <banner>
+Banner image file name.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-background <background>
+Background image file name.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-cdtitle <cdtitle>
+Mix logo file name.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-sample\-start <sample_start>
+Preview start in seconds. Detected when omitted.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-sample\-length <sample_length>
+Preview length in seconds.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-D, \-\-difficulty <difficulty>
+Difficulty to generate, as NAME or NAME:RATING. Repeat for several.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-m, \-\-meter <meter>
+Rating for every difficulty that does not carry its own. Zero uses the defaults.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-s, \-\-style <style>
+Physical constraints to respect.
+.INDENT 7.0
+.TP
+.B Options
+feet | hands | keyboard
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-bpm <bpm>
+Override the detected tempo.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-bpm\-multiplier <bpm_multiplier>
+Scale the tempo. Use 2 when detection halved it, or 0.5 when it doubled it.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-offset <offset>
+Override the detected offset.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-shift\-beats <shift_beats>
+Move beat 0 later by this many beats. Use 0.5 when the grid locked onto the off\-beat.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-latency <latency>
+Seconds of constant playback latency to compensate, applied to every chart. Also settable as SMLAB_LATENCY.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-i, \-\-image, \-\-no\-image
+Also draw each chart as a picture next to the simfile.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-svg, \-\-png
+Draw charts as SVG instead of PNG.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-f, \-\-format <fmt>
+Simfile format to write.
+.INDENT 7.0
+.TP
+.B Default
+\fB\(aqssc\(aq\fP
+.TP
+.B Options
+dwi | sm | ssc
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-balance <balance>
+How hard to pull the four panels towards equal use. Zero leaves the model alone, which leans heavily on the middle two.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-crossovers <crossovers>
+Share of streamed notes that may land on a crossed foot. Omit for the measured default, or pass 0 to bar crossovers entirely. A sixteenth stream is held to a fraction of whatever applies.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-triplets, \-\-no\-triplets
+Also place notes on the twelfth grid. Off by default; 74%% of charts never do.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-mines, \-\-no\-mines
+Allow mines. Off by default.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-rolls, \-\-no\-rolls
+Allow roll notes. Off by default; 98 per cent of real charts have none.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-holds <holds>
+Largest share of notes that may be freezes. Real charts sit near 0.04.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-density <density>
+Multiplier on how many steps to place.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-temperature <temperature>
+Sampling temperature for patterns.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-scale <scale>
+Rating scale the ratings are on. Classic DDR 10, In The Groove 15, X\-era DDR 20.
+.INDENT 7.0
+.TP
+.B Options
+10 | 15 | 20
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-nps <nps>
+Aim for this note rate instead of the one the rating implies. Zero uses the rating.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-seed <seed>
+Seed for sampling.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-weights\-repo <weights_repo>
+Repository to download weights from. Also settable as SMLAB_WEIGHTS_REPO.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-weights\-revision <weights_revision>
+Pin the weights to a revision. Also settable as SMLAB_WEIGHTS_REVISION.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-c, \-\-checkpoints <checkpoints>
+Directory of locally trained checkpoints. Uses the bundled models when omitted.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-v, \-\-vocabulary <vocabulary>
+Pattern vocabulary to use. Uses the bundled one when omitted.
+.UNINDENT
+.sp
+Arguments
+.INDENT 0.0
+.TP
+.B AUDIO
+Required argument
+.UNINDENT
+.SS image
+.sp
+Draw an existing simfile\(aqs charts as pictures.
+.sp
+Usage
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.EX
+smlab image [OPTIONS] SIMFILE
+.EE
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-o, \-\-output <output>
+Directory to write into. Defaults to .images/ beside the simfile.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-svg, \-\-png
+Draw as SVG instead of PNG.
+.UNINDENT
+.sp
+Arguments
+.INDENT 0.0
+.TP
+.B SIMFILE
+Required argument
+.UNINDENT
+.SS publish
+.sp
+Upload trained weights so an installed copy can download them.
+.sp
+Usage
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.EX
+smlab publish [OPTIONS]
+.EE
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-c, \-\-checkpoints <checkpoints>
+Directory holding the trained weights.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-r, \-\-repository <repository>
+Repository to upload to. Defaults to tatsh/smlab.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-n, \-\-dry\-run
+List what would be uploaded and stop.
+.UNINDENT
+.SS scan
+.sp
+Index a Songs tree into a ground\-truth timing manifest.
+.sp
+Usage
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.EX
+smlab scan [OPTIONS] SONGS
+.EE
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-o, \-\-output <output>
+Where to write the manifest.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-w, \-\-workers <workers>
+Number of worker processes.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-x, \-\-exclude <exclude>
+Pack name to leave out, on top of the defaults. Repeatable.
+.UNINDENT
+.sp
+Arguments
+.INDENT 0.0
+.TP
+.B SONGS
+Required argument
+.UNINDENT
+.SS stems
+.sp
+Separate every song into stems and build the features training reads.
+.sp
+Usage
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.EX
+smlab stems [OPTIONS]
+.EE
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-m, \-\-manifest <manifest>
+Manifest to read.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-o, \-\-output <output>
+Cache directory to fill.
+.UNINDENT
+.SS train
+.sp
+Train the shared encoder and both heads.
+.sp
+Usage
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.EX
+smlab train [OPTIONS]
+.EE
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-c, \-\-cache\-dir <cache_dir>
+Stem feature cache to train on.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-m, \-\-manifest <manifest>
+Manifest describing the corpus.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-v, \-\-vocabulary <vocabulary>
+Pattern vocabulary to use.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-o, \-\-output <output>
+Directory to write checkpoints into.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-e, \-\-epochs <epochs>
+Passes over the chart list.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-b, \-\-batch\-size <batch_size>
+Windows per optimizer step.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-w, \-\-workers <workers>
+Loader worker processes.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-limit <limit>
+Cap on charts loaded, for quick runs.
+.UNINDENT
+.SS train\-offset
+.sp
+Train the model that places the downbeat.
+.sp
+Usage
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.EX
+smlab train\-offset [OPTIONS]
+.EE
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-c, \-\-cache\-dir <cache_dir>
+Envelope cache to train on.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-o, \-\-output <output>
+Directory to write the checkpoint into.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-e, \-\-epochs <epochs>
+Passes over the song list.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-b, \-\-batch\-size <batch_size>
+Profiles per optimizer step.
+.UNINDENT
+.SS vocab
+.sp
+Collect the note\-row patterns the corpus actually uses.
+.sp
+Usage
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.EX
+smlab vocab [OPTIONS]
+.EE
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-c, \-\-cache\-dir <cache_dir>
+Feature cache to scan.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-o, \-\-output <output>
+Where to write the vocabulary.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-l, \-\-limit <limit>
+Largest vocabulary to build.
+.UNINDENT
+.SH AUTHOR
+Andrew Udvare <audvare@gmail.com>
+.SH COPYRIGHT
+2026
+.\" Generated by docutils manpage writer.
+.
