@@ -197,8 +197,8 @@ def test_a_chart_with_no_rows_writes_one_silent_measure() -> None:
 
 
 def test_audio_already_in_place_is_not_copied_over_itself(tmp_path: Path) -> None:
-    # Generating into the folder the audio already lives in must not truncate
-    # the file by copying it onto itself.
+    # Generating into the folder the audio already lives in must not truncate the file by copying
+    # it onto itself.
     directory = tmp_path / 'Song'
     directory.mkdir()
     audio = directory / 'Song.ogg'
@@ -341,8 +341,8 @@ def test_the_radar_carries_one_set_of_values_for_each_player() -> None:
 
 
 def test_the_radar_counts_what_the_chart_holds() -> None:
-    # Two taps together, a freeze head, its tail beside a mine, then one tap.
-    # A tail is not struck, so it counts as neither a note nor a tap.
+    # Two taps together, a freeze head, its tail beside a mine, then one tap. A tail is not struck,
+    # so it counts as neither a note nor a tap.
     rows = [(0, [1, 0, 0, 1]), (12, [2, 0, 0, 0]), (24, [3, 0, 0, 5]), (36, [0, 1, 0, 0])]
     stream, _voltage, air, freeze, _chaos, notes, taps, jumps, holds, mines = radar_values(
         rows, 10.0
@@ -392,8 +392,8 @@ def test_a_difficulty_the_format_does_not_know_becomes_an_edit() -> None:
 
 
 def test_rolls_and_lifts_are_counted_apart_from_taps() -> None:
-    # A roll is its own category, and a lift is a note released rather than
-    # struck but still counts among the notes.
+    # A roll is its own category, and a lift is a note released rather than struck but still counts
+    # among the notes.
     rows = [(0, [4, 0, 0, 0]), (12, [3, 0, 0, 0]), (24, [0, 0, 0, 6])]
     values = radar_values(rows, 10.0)
     assert values[5] == 2

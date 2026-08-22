@@ -43,8 +43,8 @@ def _record(**changes: object) -> dict[str, object]:
     ('changes', 'wanted'),
     [
         ({}, True),
-        # A tempo that moves means the beat grid moves, so a single phase label
-        # would be wrong for most of the song.
+        # A tempo that moves means the beat grid moves, so a single phase label would be wrong for
+        # most of the song.
         ({'constant_bpm': False}, False),
         # An offset the scanner guessed is not evidence of anything.
         ({'offset_declared': False}, False),
@@ -65,9 +65,8 @@ def test_only_songs_with_a_trustworthy_grid_are_used(
         (0, 0, 0),
         (0, 1, 1),
         (1, 0, 1),
-        # The bar wraps, so bin 95 and bin 0 are neighbours rather than 95
-        # apart. Measuring that the long way round would make a near-perfect
-        # answer look like the worst possible one.
+        # The bar wraps, so bin 95 and bin 0 are neighbours rather than 95 apart. Measuring that the
+        # long way round would make a near-perfect answer look like the worst possible one.
         (95, 0, 1),
         (0, 95, 1),
         (0, 48, 48),
@@ -113,8 +112,8 @@ def test_the_label_matches_the_authored_offset(tmp_path: Path) -> None:
 
 
 def test_the_label_does_not_move_with_the_excerpt(tmp_path: Path) -> None:
-    # Training draws a fresh excerpt from each song every epoch. If the label
-    # depended on where the excerpt began, most of them would be wrong.
+    # Training draws a fresh excerpt from each song every epoch. If the label depended on where the
+    # excerpt began, most of them would be wrong.
     _write_song(tmp_path / '00000003cafe.npz', -0.35)
     data = FoldedProfiles(tmp_path, OffsetTrainingConfig())
     labels = {int(data[index][1]) for index in range(6)}
@@ -133,10 +132,9 @@ def test_the_split_is_disjoint(tmp_path: Path) -> None:
 
 
 def test_each_worker_draws_its_own_excerpts(tmp_path: Path, mocker: MockerFixture) -> None:
-    # A generator built in __init__ is copied into every worker along with its
-    # state, so all of them draw identically and the model sees a fraction of
-    # the variety the epoch count implies. Deferring to the per-worker seed
-    # PyTorch supplies is what separates them.
+    # A generator built in __init__ is copied into every worker along with its state, so all of
+    # them draw identically and the model sees a fraction of the variety the epoch count implies.
+    # Deferring to the per-worker seed PyTorch supplies is what separates them.
     _write_song(tmp_path / '00000003cafe.npz', -0.35)
     drawn = []
     for seed in (11, 22, 33):
@@ -230,8 +228,7 @@ def test_training_falls_back_to_the_default_settings(tmp_path: Path) -> None:
 
 
 def test_an_epoch_that_does_not_improve_leaves_the_checkpoint_alone(tmp_path: Path) -> None:
-    # Only the best epoch is kept, so a later one that scores no better must
-    # not overwrite it.
+    # Only the best epoch is kept, so a later one that scores no better must not overwrite it.
     for index in range(16):
         _write_song(tmp_path / f'{index:08x}00000000.npz', -0.1 * index)
     torch.manual_seed(0)

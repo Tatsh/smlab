@@ -46,9 +46,8 @@ def test_every_tap_becomes_one_arrow() -> None:
 
 
 def test_each_lane_is_turned_a_different_way() -> None:
-    # An up arrow rotated per lane is what makes the four panels legible; if two
-    # lanes shared a rotation the picture would be wrong in a way that still
-    # renders.
+    # An up arrow rotated per lane is what makes the four panels legible; if two lanes shared a
+    # rotation the picture would be wrong in a way that still renders.
     rows = [(0, [1, 1, 1, 1])]
     root = _parse(render_chart(rows, _HEADING))
     turns = {node.get('points', '') for node in root.iter() if node.tag.endswith('polygon')}
@@ -72,8 +71,8 @@ def test_a_freeze_draws_a_body_between_head_and_tail() -> None:
 
 
 def test_a_freeze_crossing_a_column_break_is_drawn_in_both() -> None:
-    # Columns are separate places on the page, so one tall rectangle would run
-    # through unrelated measures. It has to be split per measure instead.
+    # Columns are separate places on the page, so one tall rectangle would run through unrelated
+    # measures. It has to be split per measure instead.
     start = (MEASURES_PER_COLUMN - 1) * _MEASURE
     rows = [(start, [2, 0, 0, 0]), (start + 3 * _MEASURE, [3, 0, 0, 0])]
     root = _parse(render_chart(rows, _HEADING))
@@ -82,9 +81,9 @@ def test_a_freeze_crossing_a_column_break_is_drawn_in_both() -> None:
 
 
 def test_a_freeze_ending_on_a_bar_line_stays_inside_its_measure() -> None:
-    # The tail slot ends the freeze rather than carrying any of it. Drawing the
-    # measure that bar line opens took its extent from the previous column and
-    # produced one rectangle running the whole height of the page.
+    # The tail slot ends the freeze rather than carrying any of it. Drawing the measure that bar
+    # line opens took its extent from the previous column and produced one rectangle running the
+    # whole height of the page.
     start = MEASURES_PER_COLUMN * _MEASURE - 12
     rows = [(start, [0, 2, 0, 0]), (start + 12, [0, 3, 0, 0])]
     bodies = _bodies(render_chart(rows, _HEADING))
@@ -113,8 +112,7 @@ def test_the_title_is_escaped() -> None:
 
 
 def test_a_png_is_written_when_the_suffix_says_so(tmp_path: Path) -> None:
-    # PNG is the default output, so the raster path has to work without a
-    # system font present.
+    # PNG is the default output, so the raster path has to work without a system font present.
     destination = tmp_path / 'chart.png'
     write_chart(destination, [(0, [1, 0, 0, 0]), (6, [0, 0, 0, 1])], _HEADING)
     assert destination.stat().st_size > 0
@@ -148,9 +146,8 @@ def test_measure_numbers_are_written_down_the_side() -> None:
 
 
 def test_a_png_falls_back_to_a_built_in_font(tmp_path: Path, mocker: MockerFixture) -> None:
-    # A container with no system fonts still has to draw the measure numbers.
-    # Pillow's own default font is loaded through truetype as well, so only a
-    # lookup by path may fail.
+    # A container with no system fonts still has to draw the measure numbers. Pillow's own default
+    # font is loaded through truetype as well, so only a lookup by path may fail.
     real = ImageFont.truetype
 
     def missing(font: Any, size: int = 10, **kwargs: Any) -> ImageFont.FreeTypeFont:
@@ -166,8 +163,8 @@ def test_a_png_falls_back_to_a_built_in_font(tmp_path: Path, mocker: MockerFixtu
 
 
 def test_every_shape_kind_survives_the_raster_back_end(tmp_path: Path) -> None:
-    # The two back ends draw the same list of shapes, so a kind the raster one
-    # cannot handle would only show up here.
+    # The two back ends draw the same list of shapes, so a kind the raster one cannot handle would
+    # only show up here.
     destination = tmp_path / 'chart.png'
     rows = [(0, [2, 0, 0, 0]), (12, [3, 0, 0, 5]), (24, [4, 1, 0, 0])]
     write_chart(destination, rows, _HEADING)
@@ -175,8 +172,8 @@ def test_every_shape_kind_survives_the_raster_back_end(tmp_path: Path) -> None:
 
 
 def test_a_quarter_note_sits_inside_the_bar_rather_than_on_its_line() -> None:
-    # Drawn where the arithmetic puts it, the bar line runs through the arrow
-    # and the measure reads as starting a note early.
+    # Drawn where the arithmetic puts it, the bar line runs through the arrow and the measure reads
+    # as starting a note early.
     root = _parse(render_chart([(0, [1, 0, 0, 0])], _HEADING))
     arrow = next(node for node in root.iter() if node.tag.endswith('polygon'))
     tops = [float(pair.split(',')[1]) for pair in (arrow.get('points') or '').split()]

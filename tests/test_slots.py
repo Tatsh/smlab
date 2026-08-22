@@ -127,10 +127,10 @@ def test_an_empty_chart_tidies_to_nothing() -> None:
 
 
 def test_a_barely_used_measure_is_emptied_onto_its_downbeat() -> None:
-    # A rest that begins wherever the previous measure trailed off starts off
-    # the beat, so the downbeat is kept and everything after it dropped.
-    # At most a tenth of the measures may rest, so the song has to be long
-    # enough for that tenth to round up to one.
+    # A rest that begins wherever the previous measure trailed off starts off the beat, so the
+    # downbeat is kept and everything after it dropped.
+    # At most a tenth of the measures may rest, so the song has to be long enough for that tenth to
+    # round up to one.
     measures = 16
     slots = measures * MEASURE_SLOTS
     busy = [
@@ -215,8 +215,8 @@ def test_a_song_with_no_slots_chooses_nothing() -> None:
 
 
 def test_notes_stay_on_the_sixteenth_grid_by_default() -> None:
-    # Ranking every subdivision together scatters notes onto twenty-fourths,
-    # which is what a chart full of stray off-colour arrows is.
+    # Ranking every subdivision together scatters notes onto twenty-fourths, which is what a chart
+    # full of stray off-colour arrows is.
     assert all(
         slot % _QUARTER % 3 == 0
         for slot in choose_slots(_scores(16), _TIMING, GenerationConfig(nps=8.0))
@@ -224,8 +224,8 @@ def test_notes_stay_on_the_sixteenth_grid_by_default() -> None:
 
 
 def test_a_rested_measure_that_never_plays_keeps_no_downbeat() -> None:
-    # A measure the seeding already silenced has nothing to hit the downbeat
-    # of, so emptying it must not put a note back.
+    # A measure the seeding already silenced has nothing to hit the downbeat of, so emptying it
+    # must not put a note back.
     measures = 16
     slots = measures * MEASURE_SLOTS
     last = measures - 1
@@ -244,8 +244,8 @@ def test_a_rested_measure_that_never_plays_keeps_no_downbeat() -> None:
 
 
 def test_slots_with_no_music_in_them_are_never_chosen() -> None:
-    # Which measures rest is otherwise read off the placement scores, and over
-    # dead air the network still returns a number. The audio says so outright.
+    # Which measures rest is otherwise read off the placement scores, and over dead air the network
+    # still returns a number. The audio says so outright.
     measures = 16
     scores = _scores(measures)
     loudness = np.full(len(scores), -30.0, dtype=np.float32)

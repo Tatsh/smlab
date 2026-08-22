@@ -100,8 +100,7 @@ def test_every_note_slot_is_encoded_and_scored() -> None:
 
 
 def test_a_song_longer_than_one_window_is_encoded_in_chunks() -> None:
-    # Attention over a whole song would not fit, so it is encoded in windows
-    # and the pieces joined.
+    # Attention over a whole song would not fit, so it is encoded in windows and the pieces joined.
     encoded, logits = encode_song(_model(), _features(measures=70), GenerationConfig(), _CPU)
     assert encoded.shape[0] == 70 * MEASURE_SLOTS
     assert logits.shape == (70 * MEASURE_SLOTS,)
@@ -130,8 +129,8 @@ def test_every_row_lands_on_a_slot_in_ascending_order() -> None:
 
 
 def test_no_row_is_empty() -> None:
-    # Where the rests go is the placement head's decision; a blank row would be
-    # the selection head quietly overruling it.
+    # Where the rests go is the placement head's decision; a blank row would be the selection head
+    # quietly overruling it.
     rows = generate_rows(
         _model(), _VOCABULARY, _features(), _TIMING, GenerationConfig(nps=4.0, seed=1), _CPU
     )
@@ -183,8 +182,8 @@ def test_a_rate_of_almost_nothing_still_places_one_note() -> None:
 
 
 def test_every_freeze_is_closed() -> None:
-    # A head with no tail makes its panel read as occupied for the rest of the
-    # song and stops the file loading at all.
+    # A head with no tail makes its panel read as occupied for the rest of the song and stops the
+    # file loading at all.
     rows = generate_rows(
         _model(),
         _VOCABULARY,
@@ -204,8 +203,8 @@ def test_every_freeze_is_closed() -> None:
 
 
 def test_a_freeze_still_open_at_the_end_is_closed_after_it() -> None:
-    # Seed four leaves a freeze open when the last chosen slot is decoded, so
-    # a tail has to be written a beat past it or the file will not load.
+    # Seed four leaves a freeze open when the last chosen slot is decoded, so a tail has to be
+    # written a beat past it or the file will not load.
     rows = generate_rows(
         _model(),
         _VOCABULARY,
@@ -220,8 +219,8 @@ def test_a_freeze_still_open_at_the_end_is_closed_after_it() -> None:
 
 
 def test_a_vocabulary_that_permits_nothing_still_writes_a_row() -> None:
-    # Every pattern here is an orphan tail, which the mask bars at every level
-    # of relaxation. Something still has to be placed.
+    # Every pattern here is an orphan tail, which the mask bars at every level of relaxation.
+    # Something still has to be placed.
     tails_only = Vocabulary([encode_row((3, 0, 0, 0)), encode_row((0, 3, 0, 0))])
     torch.manual_seed(0)
     model = ChartModel(len(tails_only), _SMALL).eval()
@@ -233,8 +232,8 @@ def test_a_vocabulary_that_permits_nothing_still_writes_a_row() -> None:
 
 
 def test_a_panel_is_free_again_once_its_freeze_has_ended() -> None:
-    # A freeze that is merely forgotten leaves its panel reading as occupied
-    # for the rest of the song.
+    # A freeze that is merely forgotten leaves its panel reading as occupied for the rest of the
+    # song.
     rows = generate_rows(
         _model(),
         _VOCABULARY,
@@ -255,8 +254,8 @@ def test_a_panel_is_free_again_once_its_freeze_has_ended() -> None:
 
 
 def test_a_keyboard_chart_may_step_a_panel_again_sooner() -> None:
-    # A foot has to travel; a finger does not, so the jack limit only applies
-    # to a chart meant to be danced.
+    # A foot has to travel; a finger does not, so the jack limit only applies to a chart meant to
+    # be danced.
     features = _features(measures=16)
     model = _model()
     config = GenerationConfig(nps=8.0, seed=1)
@@ -273,9 +272,9 @@ def test_a_keyboard_chart_may_step_a_panel_again_sooner() -> None:
 
 
 def test_notes_stay_on_the_sixteenth_grid_unless_triplets_are_asked_for() -> None:
-    # Ranking every slot equally scatters notes onto twenty-fourths, which is
-    # what a chart full of stray off-colour arrows is. Freeze tails are exempt:
-    # they end a freeze rather than being struck, so they carry no colour.
+    # Ranking every slot equally scatters notes onto twenty-fourths, which is what a chart full of
+    # stray off-colour arrows is. Freeze tails are exempt: they end a freeze rather than being
+    # struck, so they carry no colour.
     rows = generate_rows(
         _model(),
         _VOCABULARY,

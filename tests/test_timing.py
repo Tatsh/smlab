@@ -76,15 +76,15 @@ def test_empty_bpms_is_rejected() -> None:
 def test_a_time_inside_a_stop_holds_the_beat_still() -> None:
     # The chart waits at the stop's beat for its whole duration.
     timing = TimingData((BPMSegment(0.0, 120.0),), stops=(StopSegment(4.0, 1.0),))
-    # Beat 4 arrives a second late because the stop sits in front of it, so
-    # the frozen window is the second before that moment.
+    # Beat 4 arrives a second late because the stop sits in front of it, so the frozen window is
+    # the second before that moment.
     assert timing.time_at_beat(4.0) == pytest.approx(3.0)
     assert timing.beat_at_time(2.5) == pytest.approx(4.0)
 
 
 def test_a_tempo_declared_after_beat_zero_still_governs_from_it() -> None:
-    # StepMania treats the first tempo as governing from beat 0 whatever beat
-    # the tag names, so the two files describe the same song.
+    # StepMania treats the first tempo as governing from beat 0 whatever beat the tag names, so the
+    # two files describe the same song.
     late = TimingData((BPMSegment(8.0, 120.0),))
     early = TimingData((BPMSegment(0.0, 120.0),))
     assert late.time_at_beat(4.0) == pytest.approx(early.time_at_beat(4.0))
@@ -119,8 +119,8 @@ def test_the_primary_tempo_is_the_one_at_beat_zero() -> None:
 
 
 def test_a_stop_and_a_tempo_change_on_one_beat_are_both_applied() -> None:
-    # StepMania orders the tempo change first, so the pause is measured in
-    # seconds and the beats after it run at the new tempo.
+    # StepMania orders the tempo change first, so the pause is measured in seconds and the beats
+    # after it run at the new tempo.
     timing = TimingData(
         (BPMSegment(0.0, 120.0), BPMSegment(4.0, 240.0)),
         stops=(StopSegment(4.0, 1.0),),

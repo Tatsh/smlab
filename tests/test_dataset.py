@@ -57,8 +57,8 @@ def test_features_are_one_row_per_grid_slot() -> None:
 
 
 def test_a_slot_past_the_end_of_the_audio_stops_the_fill() -> None:
-    # An offset far into the future puts every slot beyond the samples, so the
-    # loop must break rather than index past the spectrogram.
+    # An offset far into the future puts every slot beyond the samples, so the loop must break
+    # rather than index past the spectrogram.
     late = TimingData.constant(_BPM, -30.0)
     features = beat_features(_tone(2.0), late, sample_rate=_RATE)
     assert float(np.abs(features.astype(np.float32)).max()) == pytest.approx(0.0)

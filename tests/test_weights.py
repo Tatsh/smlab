@@ -99,8 +99,8 @@ def test_download_honours_the_configured_repository(
 def test_the_hub_client_being_absent_is_explained(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
 ) -> None:
-    # Downloading is the fallback when nothing is local, so its absence has to
-    # point at the other way of supplying weights.
+    # Downloading is the fallback when nothing is local, so its absence has to point at the other
+    # way of supplying weights.
     monkeypatch.delenv(REPOSITORY_VARIABLE, raising=False)
     monkeypatch.chdir(tmp_path)
     mocker.patch.dict(sys.modules, {'huggingface_hub': None})

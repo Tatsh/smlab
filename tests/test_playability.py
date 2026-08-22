@@ -62,8 +62,8 @@ def test_impossibly_fast_repeats_are_keyboard_only() -> None:
 
 
 def test_superhuman_sustained_rate_is_keyboard_only() -> None:
-    # Twenty notes per second held for twenty seconds, alternating panels so
-    # that geometry alone would allow it.
+    # Twenty notes per second held for twenty seconds, alternating panels so that geometry alone
+    # would allow it.
     report = analyze_rows(_alternating(400, 0.05))
     assert report.style == 'keyboard'
     assert report.sustained_nps > 12.0
@@ -134,22 +134,22 @@ def test_an_alternation_the_feet_suit_crosses_nowhere(panels: str) -> None:
 
 @pytest.mark.parametrize(('panels', 'crossed'), [('L U L U R U R U', 2), ('L D R D L D R D', 2)])
 def test_a_run_that_puts_a_foot_on_the_far_panel_counts_it(panels: str, crossed: int) -> None:
-    # Inside a run the feet alternate, so the panel sequence decides which
-    # steps land crossed. Four notes into LULU the alternation has the left
-    # foot due, and the next note is on the right panel.
+    # Inside a run the feet alternate, so the panel sequence decides which steps land crossed. Four
+    # notes into LULU the alternation has the left foot due, and the next note is on the right
+    # panel.
     assert analyze_rows(_run(panels)).crossovers == crossed
 
 
 def test_the_opening_note_sets_the_foot_rather_than_inheriting_one() -> None:
-    # It has no predecessor to alternate away from, and starting on the wrong
-    # foot would report the whole run as crossed.
+    # It has no predecessor to alternate away from, and starting on the wrong foot would report the
+    # whole run as crossed.
     assert analyze_rows(_run('R L R L R L R L')).crossovers == 0
     assert analyze_rows(_run('L R L R L R L R')).crossovers == 0
 
 
 def test_notes_too_far_apart_to_be_a_run_reset_the_feet() -> None:
-    # With time to choose, a dancer takes each note on whichever foot suits,
-    # so nothing crosses however the panels fall.
+    # With time to choose, a dancer takes each note on whichever foot suits, so nothing crosses
+    # however the panels fall.
     spaced = [
         (index * 1.0, _PANELS[name])
         for index, name in enumerate(['L', 'U', 'L', 'U', 'R', 'U', 'R', 'U'])
@@ -158,9 +158,9 @@ def test_notes_too_far_apart_to_be_a_run_reset_the_feet() -> None:
 
 
 def test_a_jump_crosses_nothing_itself_but_still_moves_the_alternation() -> None:
-    # Both feet are committed, so the jump has no crossed foot of its own. It
-    # still takes a turn, which is what decides the note after it, and this is
-    # the model the generator budgets crossovers against.
+    # Both feet are committed, so the jump has no crossed foot of its own. It still takes a turn,
+    # which is what decides the note after it, and this is the model the generator budgets
+    # crossovers against.
     gap = STREAM_SECONDS * 0.75
     both = [1, 0, 0, 1]
     after_right = [(0.0, _PANELS['L']), (gap, both), (2 * gap, _PANELS['R'])]
@@ -170,9 +170,9 @@ def test_a_jump_crosses_nothing_itself_but_still_moves_the_alternation() -> None
 
 
 def test_a_clean_stance_is_reachable_wherever_a_crossed_one_is() -> None:
-    # This is why the feasibility search cannot answer the crossover question:
-    # the foot states are symmetric under swapping, and it prices crossing at
-    # four, so its cheapest assignment simply never crosses.
+    # This is why the feasibility search cannot answer the crossover question: the foot states are
+    # symmetric under swapping, and it prices crossing at four, so its cheapest assignment simply
+    # never crosses.
     for panels in ({0}, {1}, {2}, {3}, {0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3}):
         needed = min(len(panels), MAX_FEET)
         matching = [state for state in FOOT_STATES if len(panels & set(state)) == needed]

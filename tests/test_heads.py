@@ -41,8 +41,8 @@ def test_a_position_never_stepped_on_scores_below_one_always_stepped_on() -> Non
 
 
 def test_the_prior_is_clipped_away_from_certainty() -> None:
-    # Log-odds of a rate of exactly zero or one are infinite, which would
-    # poison every score downstream.
+    # Log-odds of a rate of exactly zero or one are infinite, which would poison every score
+    # downstream.
     counts = np.array([0.0, 50.0], dtype=np.float64)
     totals = np.array([50.0, 50.0], dtype=np.float64)
     assert np.all(np.isfinite(metric_prior_logits(counts, totals)))
@@ -72,8 +72,8 @@ def test_placement_adds_the_prior_it_was_given() -> None:
 
 
 def test_the_prior_can_be_damped_for_ranking() -> None:
-    # The prior is right about probability and wrong for ranking, so decoding
-    # keeps only a quarter of it.
+    # The prior is right about probability and wrong for ranking, so decoding keeps only a quarter
+    # of it.
     prior = np.full(MEASURE_SLOTS, 3.0, dtype=np.float32)
     head = PlacementHead(_WIDTH, prior).eval()
     encoded = torch.zeros(1, MEASURE_SLOTS, _WIDTH)
@@ -93,8 +93,7 @@ def test_selection_scores_every_pattern_for_every_step() -> None:
 
 
 def test_a_gap_beyond_the_embedding_is_clamped() -> None:
-    # Long rests happen, and without the clamp the lookup runs off the end of
-    # the embedding table.
+    # Long rests happen, and without the clamp the lookup runs off the end of the embedding table.
     head = SelectionHead(_WIDTH, _VOCABULARY, layers=1, heads=2).eval()
     encoded = torch.randn(1, MEASURE_SLOTS, _WIDTH)
     batch = _batch(4, MEASURE_SLOTS)._replace(delta=torch.full((1, 4), MAX_DELTA * 10))
@@ -103,8 +102,7 @@ def test_a_gap_beyond_the_embedding_is_clamped() -> None:
 
 
 def test_selection_cannot_read_ahead_of_itself() -> None:
-    # Decoding walks the steps in order, so a step's score must not depend on
-    # anything after it.
+    # Decoding walks the steps in order, so a step's score must not depend on anything after it.
     head = SelectionHead(_WIDTH, _VOCABULARY, layers=1, heads=2).eval()
     encoded = torch.randn(1, MEASURE_SLOTS, _WIDTH)
     batch = _batch(8, MEASURE_SLOTS)

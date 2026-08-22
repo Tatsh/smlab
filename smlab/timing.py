@@ -245,8 +245,8 @@ class TimingData:
         """
         self._build()
         index = max(bisect.bisect_right(self._beats, beat) - 1, 0)
-        # Several breakpoints share a beat across a stop, so taking the last
-        # one judges notes on that beat after the pause elapses.
+        # Several breakpoints share a beat across a stop, so taking the last one judges notes on
+        # that beat after the pause elapses.
         return self._times[index] + (beat - self._beats[index]) * self._rates[index]
 
     def _build(self) -> None:
@@ -255,11 +255,11 @@ class TimingData:
             return
         bpms = sorted(self.bpms)
         if bpms[0].beat > 0.0:
-            # StepMania treats the first tempo as governing from beat 0 even
-            # when the tag declares a later start beat.
+            # StepMania treats the first tempo as governing from beat 0 even when the tag declares
+            # a later start beat.
             bpms.insert(0, BPMSegment(0.0, bpms[0].bpm))
-        # Each event is (beat, kind, value); the kind orders tempo changes
-        # before stops sharing a beat, matching StepMania's segment iteration.
+        # Each event is (beat, kind, value); the kind orders tempo changes before stops sharing a
+        # beat, matching StepMania's segment iteration.
         events = [(segment.beat, 0, segment.bpm) for segment in bpms[1:]]
         events.extend((stop.beat, 1, stop.seconds) for stop in sorted(self.stops))
         events.sort(key=operator.itemgetter(0, 1))
@@ -280,8 +280,8 @@ class TimingData:
             if kind == 0:
                 current_bpm = value
             else:
-                # A stop records a zero-width beat interval so that the beat to
-                # time mapping stays well defined across the pause.
+                # A stop records a zero-width beat interval so that the beat to time mapping stays
+                # well defined across the pause.
                 current_time += value
                 self._rates.append(0.0)
                 self._beats.append(current_beat)

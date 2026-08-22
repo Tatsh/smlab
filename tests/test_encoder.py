@@ -29,9 +29,9 @@ def _conditioning(batch: int) -> tuple[torch.Tensor, ...]:
     ],
 )
 def test_any_length_produces_one_vector_per_note_slot(fine_slots: int) -> None:
-    # A song rarely ends on a bar line, so the encoder must handle a partial
-    # final measure. Every training window is a whole number of measures, so
-    # this is only ever exercised at generation time.
+    # A song rarely ends on a bar line, so the encoder must handle a partial final measure. Every
+    # training window is a whole number of measures, so this is only ever exercised at generation
+    # time.
     model = AudioEncoder(_SMALL).eval()
     features = torch.randn(1, fine_slots, TOTAL_CHANNELS)
     with torch.no_grad():
@@ -49,8 +49,7 @@ def test_batches_are_encoded_independently() -> None:
 
 
 def test_conditioning_changes_the_encoding() -> None:
-    # Style must reach the output, or asking for a keyboard chart would return
-    # a pad chart.
+    # Style must reach the output, or asking for a keyboard chart would return a pad chart.
     model = AudioEncoder(_SMALL).eval()
     features = torch.randn(1, MEASURE_SLOTS * 2 * 2, TOTAL_CHANNELS)
     zeros = torch.zeros(1, dtype=torch.long)
@@ -80,10 +79,10 @@ def test_difficulty_changes_the_encoding() -> None:
 
 
 def test_note_rate_changes_the_encoding() -> None:
-    # A rating is a lossy description of density: the classic scale saturates at
-    # the top and a keyboard chart runs twice as dense as a pad chart carrying
-    # the same number. The measured rate has to reach the output for the model
-    # to learn density directly rather than inferring it from that number.
+    # A rating is a lossy description of density: the classic scale saturates at the top and a
+    # keyboard chart runs twice as dense as a pad chart carrying the same number. The measured rate
+    # has to reach the output for the model to learn density directly rather than inferring it from
+    # that number.
     model = AudioEncoder(_SMALL).eval()
     features = torch.randn(1, MEASURE_SLOTS * 2 * 2, TOTAL_CHANNELS)
     zeros = torch.zeros(1, dtype=torch.long)

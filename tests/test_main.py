@@ -113,8 +113,7 @@ def test_a_username_is_reported(mocker: MockerFixture) -> None:
 
 
 def test_a_missing_username_falls_back_to_the_tool_name(mocker: MockerFixture) -> None:
-    # A container with no passwd entry still has to credit the chart to
-    # something.
+    # A container with no passwd entry still has to credit the chart to something.
     mocker.patch('getpass.getuser', side_effect=KeyError)
     assert current_user() == 'smlab'
 
@@ -125,8 +124,8 @@ def test_the_classic_scale_uses_the_table_directly(name: str) -> None:
 
 
 def test_another_scale_translates_through_the_note_rate() -> None:
-    # The table is written on the classic scale, so asking for another one has
-    # to land on whichever rating implies the same speed.
+    # The table is written on the classic scale, so asking for another one has to land on whichever
+    # rating implies the same speed.
     wanted = target_nps(DEFAULT_METERS['Hard'], 10)
     chosen = default_meter('Hard', 20)
     assert abs(target_nps(chosen, 20) - wanted) <= abs(target_nps(chosen + 2, 20) - wanted)
@@ -451,8 +450,8 @@ def test_the_weights_repository_can_be_overridden(
 def test_generation_without_weights_stops(
     runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # Resolution falls back to ./checkpoints, so the working directory has to
-    # be somewhere without one.
+    # Resolution falls back to ./checkpoints, so the working directory has to be somewhere without
+    # one.
     empty = tmp_path / 'checkpoints'
     empty.mkdir()
     (tmp_path / 'elsewhere').mkdir()
@@ -622,8 +621,8 @@ def test_a_rating_that_is_not_a_rating_is_refused(
 def test_a_trained_offset_model_places_the_downbeat(
     runner: CliRunner, tmp_path: Path, mocker: MockerFixture
 ) -> None:
-    # Folding picks its phase from the loudest point of the envelope, which is
-    # not where a downbeat is, so the model replaces that offset.
+    # Folding picks its phase from the loudest point of the envelope, which is not where a downbeat
+    # is, so the model replaces that offset.
     mocker.patch('smlab.main.EncoderConfig', return_value=_SMALL)
     mocker.patch('smlab.main.load_vocabulary', return_value=_VOCABULARY)
     mocker.patch('smlab.main.refine_offset', return_value=(-0.123, 0.9))
@@ -671,8 +670,8 @@ def test_a_trained_offset_model_places_the_downbeat(
 def test_weights_that_will_not_load_leave_the_offset_alone(
     runner: CliRunner, tmp_path: Path, mocker: MockerFixture
 ) -> None:
-    # A missing offset model is not fatal: the tempo estimator supplies one of
-    # its own, just a worse one.
+    # A missing offset model is not fatal: the tempo estimator supplies one of its own, just a
+    # worse one.
     mocker.patch('smlab.main.EncoderConfig', return_value=_SMALL)
     mocker.patch('smlab.main.load_vocabulary', return_value=_VOCABULARY)
     mocker.patch('smlab.main.resolve_weights', side_effect=OSError)
@@ -713,8 +712,8 @@ def test_weights_that_will_not_load_leave_the_offset_alone(
 def test_a_preview_start_is_predicted_when_none_is_given(
     runner: CliRunner, tmp_path: Path, mocker: MockerFixture
 ) -> None:
-    # Without a preview model the start falls back to a fixed fraction of the
-    # song rather than failing the whole run.
+    # Without a preview model the start falls back to a fixed fraction of the song rather than
+    # failing the whole run.
     mocker.patch('smlab.main.load_state_dict', side_effect=OSError)
     result = runner.invoke(
         main,
@@ -768,8 +767,8 @@ def test_an_untitled_song_is_named_after_its_file(runner: CliRunner, tmp_path: P
 
 
 def test_analyzing_reports_why_a_chart_is_not_danceable(runner: CliRunner, tmp_path: Path) -> None:
-    # A row needing three panels at once cannot be danced, and the report has
-    # to say which rule it broke.
+    # A row needing three panels at once cannot be danced, and the report has to say which rule it
+    # broke.
     hands = SM_TEXT.replace('1000\n0100\n0010\n0001', '1110\n0100\n0010\n0001')
     result = runner.invoke(main, ['analyze', str(_simfile(tmp_path, hands))])
     assert result.exit_code == 0
@@ -810,8 +809,8 @@ def test_a_preview_start_can_be_given_outright(runner: CliRunner, tmp_path: Path
 def test_analyzing_a_simfile_carrying_no_tempo_stops(
     runner: CliRunner, tmp_path: Path, mocker: MockerFixture
 ) -> None:
-    # The loaders raise rather than return a Simfile with no tempo, so the
-    # guard against one has to be reached directly.
+    # The loaders raise rather than return a Simfile with no tempo, so the guard against one has to
+    # be reached directly.
     path = _simfile(tmp_path)
     mocker.patch('smlab.main.load_simfile', return_value=replace(load_simfile(path), timing=None))
     result = runner.invoke(main, ['analyze', str(path)])

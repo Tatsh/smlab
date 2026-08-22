@@ -51,16 +51,16 @@ def test_a_pulse_folds_onto_its_own_position(phase: int) -> None:
 
 @pytest.mark.parametrize('bpm', [90.0, 128.0, 155.0, 210.0])
 def test_offset_and_phase_are_inverse(bpm: float) -> None:
-    # Generation converts a predicted bin back into an offset, so a bin that
-    # does not survive the trip would silently shift the whole chart.
+    # Generation converts a predicted bin back into an offset, so a bin that does not survive the
+    # trip would silently shift the whole chart.
     assert all(
         phase_of_offset(offset_for_phase(bin_, bpm), bpm) == bin_ for bin_ in range(PHASE_BINS)
     )
 
 
 def test_folding_is_measured_from_the_given_start() -> None:
-    # Training folds excerpts taken from partway into a song and relies on the
-    # start argument to keep the label the same as it would be from zero.
+    # Training folds excerpts taken from partway into a song and relies on the start argument to
+    # keep the label the same as it would be from zero.
     envelopes = _clicks(30)
     whole = fold_profile(envelopes, _RATE, _BPM)
     skip = int(_RATE * 8.0)
@@ -69,8 +69,8 @@ def test_folding_is_measured_from_the_given_start() -> None:
 
 
 def test_each_band_is_scaled_on_its_own() -> None:
-    # A quiet band carries the downbeat as often as a loud one, so absolute
-    # level must not decide which band the model listens to.
+    # A quiet band carries the downbeat as often as a loud one, so absolute level must not decide
+    # which band the model listens to.
     samples = np.random.default_rng(0).standard_normal(22050 * 5).astype(np.float32)
     envelopes = band_envelopes(samples)
     assert envelopes.shape[0] == _BANDS
@@ -79,11 +79,10 @@ def test_each_band_is_scaled_on_its_own() -> None:
 
 @pytest.mark.parametrize('shift', [1, 7, 24, 48, 95])
 def test_the_model_is_shift_equivariant(shift: int) -> None:
-    # The whole design rests on this: turning the bar cannot change which
-    # position the model picks, only relabel it. Were it merely approximate the
-    # model could learn that downbeats favour particular bins, which is an
-    # artefact of how offsets happen to be authored rather than anything
-    # audible.
+    # The whole design rests on this: turning the bar cannot change which position the model picks,
+    # only relabel it. Were it merely approximate the model could learn that downbeats favour
+    # particular bins, which is an artefact of how offsets happen to be authored rather than
+    # anything audible.
     torch.manual_seed(0)
     model = OffsetModel().eval()
     profile = torch.randn(1, _BANDS, PHASE_BINS)
@@ -108,8 +107,8 @@ def test_a_silent_song_folds_without_dividing_by_zero() -> None:
 
 
 def test_the_phase_is_averaged_over_several_excerpts() -> None:
-    # One excerpt can be misled by a fill or a break, so the distribution is
-    # averaged over as many as the song affords.
+    # One excerpt can be misled by a fill or a break, so the distribution is averaged over as many
+    # as the song affords.
     envelopes = _clicks(0, seconds=90.0)
     phase, weight = predict_phase(OffsetModel().eval(), envelopes, _RATE, _BPM)
     assert 0 <= phase < PHASE_BINS

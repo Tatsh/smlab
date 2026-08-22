@@ -124,8 +124,8 @@ def test_a_simfile_without_audio_is_not_summarised(tmp_path: Path) -> None:
 
 
 def test_a_known_keyboard_pack_overrides_the_feasibility_check(tmp_path: Path) -> None:
-    # A keyboard chart that happens to be danceable still carries keyboard
-    # phrasing, so the pack list wins over what two feet could reach.
+    # A keyboard chart that happens to be danceable still carries keyboard phrasing, so the pack
+    # list wins over what two feet could reach.
     pack = next(iter(KEYBOARD_PACKS))
     song_dir = _song(tmp_path, pack, 'Song')
     record = summarize_song((pack, song_dir))

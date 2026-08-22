@@ -100,9 +100,8 @@ def test_a_legacy_encoding_is_read(tmp_path: Path) -> None:
 
 
 def test_undecodable_bytes_are_replaced_rather_than_raising(tmp_path: Path) -> None:
-    # A lead byte with no valid trail defeats both encodings tried, and a
-    # simfile that will not decode at all is worse than one with a mangled
-    # title.
+    # A lead byte with no valid trail defeats both encodings tried, and a simfile that will not
+    # decode at all is worse than one with a mangled title.
     path = tmp_path / 'song.sm'
     path.write_bytes(b'#TITLE:\x80\x81 broken;')
     assert read_simfile_text(path).startswith('#TITLE:')

@@ -132,8 +132,7 @@ def test_a_bare_character_is_an_eighth_note(tmp_path: Path) -> None:
 
 
 def test_a_bracket_group_subdivides_the_beat(tmp_path: Path) -> None:
-    # Round brackets are sixteenths, square are twelfths, curly are
-    # forty-eighths.
+    # Round brackets are sixteenths, square are twelfths, curly are forty-eighths.
     assert [beat for beat, _ in _dwi_chart(tmp_path, '(46)').rows()] == [0.0, 0.25]
     assert [beat for beat, _ in _dwi_chart(tmp_path, '{46}').rows()] == [0.0, 0.0625]
 
@@ -247,8 +246,8 @@ def test_a_doubles_chart_uses_eight_panels(tmp_path: Path) -> None:
 
 
 def test_a_measure_holding_only_comments_is_skipped(tmp_path: Path) -> None:
-    # A measure whose lines are all comments has no rows to divide the beats
-    # between, so it must not be measured at all.
+    # A measure whose lines are all comments has no rows to divide the beats between, so it must
+    # not be measured at all.
     text = SM_TEXT.replace('1001\n0000\n0110\n0000', '// nothing here\n// nor here')
     path = tmp_path / 'commented.sm'
     path.write_text(text)
@@ -264,8 +263,8 @@ def test_an_unreadable_song_directory_finds_no_audio(tmp_path: Path, mocker: Moc
 
 
 def test_the_music_tag_is_matched_whatever_its_case(tmp_path: Path) -> None:
-    # Packs move between filesystems that disagree about case, so a tag naming
-    # TEST.OGG has to find test.ogg.
+    # Packs move between filesystems that disagree about case, so a tag naming TEST.OGG has to find
+    # test.ogg.
     path = _simfile_with_audio(tmp_path, music='TEST.OGG')
     found = load_simfile(path).music_path()
     assert found is not None

@@ -85,8 +85,8 @@ def test_a_malformed_simfile_is_not_cached(tmp_path: Path) -> None:
 
 
 def test_a_simfile_without_timing_is_not_cached(tmp_path: Path, mocker: MockerFixture) -> None:
-    # The loaders raise rather than return a Simfile carrying no tempo, so the
-    # guard against one has to be reached directly.
+    # The loaders raise rather than return a Simfile carrying no tempo, so the guard against one
+    # has to be reached directly.
     record = _record(tmp_path)
     parsed = load_simfile(Path(record['simfile']))
     mocker.patch('smlab.cache.load_simfile', return_value=replace(parsed, timing=None))
@@ -94,8 +94,8 @@ def test_a_simfile_without_timing_is_not_cached(tmp_path: Path, mocker: MockerFi
 
 
 def test_a_chart_with_too_few_rows_is_left_out(tmp_path: Path) -> None:
-    # A handful of notes teaches the model nothing, and the song is still worth
-    # caching for its other charts.
+    # A handful of notes teaches the model nothing, and the song is still worth caching for its
+    # other charts.
     stub = """
 #NOTES:
      dance-single:

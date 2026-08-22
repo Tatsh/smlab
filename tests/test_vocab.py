@@ -108,8 +108,8 @@ def test_a_vocabulary_is_built_from_the_cache(tmp_path: Path) -> None:
 
 
 def test_the_empty_row_is_never_in_the_vocabulary(tmp_path: Path) -> None:
-    # It is the commonest pattern in any chart and the one the selection head
-    # must never be able to choose.
+    # It is the commonest pattern in any chart and the one the selection head must never be able to
+    # choose.
     charts = [{'panels': np.array([[0, 0, 0, 0]] * 50 + [[1, 0, 0, 0]], dtype=np.uint8)}]
     _write_entry(tmp_path, charts)
     built = build_vocabulary(tmp_path)

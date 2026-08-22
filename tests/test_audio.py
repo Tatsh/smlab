@@ -63,8 +63,8 @@ def test_an_envelope_peaks_where_the_clicks_are() -> None:
     envelope = onset_envelope(_clicks())
     rate = OnsetParams().frame_rate
     peaks = np.flatnonzero(envelope > envelope.max() / 2) / rate
-    # Clicks land every half second, so consecutive peaks are half a second
-    # apart give or take a frame.
+    # Clicks land every half second, so consecutive peaks are half a second apart give or take a
+    # frame.
     assert peaks.size >= 2
     assert float(np.diff(peaks).max()) == pytest.approx(0.5, abs=0.05)
 
@@ -74,8 +74,8 @@ def test_the_default_settings_are_used_when_none_are_given() -> None:
 
 
 def test_a_band_limit_is_honoured() -> None:
-    # A limited band sees a different amount of the click's energy, so the two
-    # envelopes must not be the same array.
+    # A limited band sees a different amount of the click's energy, so the two envelopes must not
+    # be the same array.
     full = onset_envelope(_clicks(), OnsetParams())
     limited = onset_envelope(_clicks(), OnsetParams(fmax=4000.0))
     assert not np.array_equal(full, limited)

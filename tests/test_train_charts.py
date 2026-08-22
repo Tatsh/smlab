@@ -48,8 +48,8 @@ def _half_the_quarters() -> np.ndarray:
 def test_perfect_ranking_scores_one() -> None:
     positions = _positions()
     labels = _half_the_quarters()
-    # Every quarter that carries a step is scored above every quarter that
-    # does not, which is what an area under the curve of one means.
+    # Every quarter that carries a step is scored above every quarter that does not, which is what
+    # an area under the curve of one means.
     assert stratified_auc(labels * _SCALE, labels, positions, _QUARTER) == pytest.approx(1.0)
 
 
@@ -61,8 +61,8 @@ def test_reversed_ranking_scores_zero() -> None:
 
 
 def test_a_stratum_with_one_class_is_not_scored() -> None:
-    # A window where every quarter carries a step, or none does, says nothing
-    # about discrimination, and averaging a made-up number in would flatter it.
+    # A window where every quarter carries a step, or none does, says nothing about discrimination,
+    # and averaging a made-up number in would flatter it.
     positions = _positions()
     labels = np.ones(_SLOTS, dtype=np.float32)
     assert math.isnan(
@@ -73,9 +73,8 @@ def test_a_stratum_with_one_class_is_not_scored() -> None:
 
 
 def test_only_the_named_stratum_counts() -> None:
-    # The point of stratifying is to remove what the metric prior already
-    # knows, so slots off the stratum must not reach the score however they
-    # are ranked.
+    # The point of stratifying is to remove what the metric prior already knows, so slots off the
+    # stratum must not reach the score however they are ranked.
     positions = _positions()
     labels = _half_the_quarters()
     spoiled = (labels * _SCALE).copy()
@@ -87,8 +86,8 @@ def test_only_the_named_stratum_counts() -> None:
 
 
 def test_a_rare_style_is_drawn_as_often_as_a_common_one() -> None:
-    # The corpus is overwhelmingly feet-style, so uniform sampling would leave
-    # the keyboard conditioning essentially unlearnt.
+    # The corpus is overwhelmingly feet-style, so uniform sampling would leave the keyboard
+    # conditioning essentially unlearnt.
     examples = [
         ChartExample(bpm=128.0, difficulty=0, meter=5, path=_UNUSED, scale=0, style=style)
         for style in [0] * 95 + [2] * 5
@@ -155,8 +154,8 @@ def test_training_reports_what_it_measured_and_saves_the_best(tmp_path: Path) ->
 
 
 def test_the_metric_prior_is_computed_once_and_reused(tmp_path: Path) -> None:
-    # Counting steps across the corpus is slow, and it does not change between
-    # runs over the same cache.
+    # Counting steps across the corpus is slow, and it does not change between runs over the same
+    # cache.
     cache_root, records, vocabulary = _corpus(tmp_path / 'cache')
     settings = ChartTrainingConfig(batch_size=1, epochs=1, warmup=1, workers=0)
     shape = EncoderConfig(
@@ -172,8 +171,7 @@ def test_the_metric_prior_is_computed_once_and_reused(tmp_path: Path) -> None:
 
 
 def test_training_falls_back_to_default_settings(tmp_path: Path) -> None:
-    # Both configuration objects are optional, and the defaults have to at
-    # least construct a model.
+    # Both configuration objects are optional, and the defaults have to at least construct a model.
     cache_root, records, vocabulary = _corpus(tmp_path)
     measured = train_chart_model(
         cache_root,
@@ -186,9 +184,8 @@ def test_training_falls_back_to_default_settings(tmp_path: Path) -> None:
 
 
 def test_a_split_that_says_nothing_never_becomes_the_best(tmp_path: Path) -> None:
-    # Every quarter of the window carries a step, so no stratum holds both
-    # classes and the area under the curve is undefined. An undefined score
-    # must not overwrite the checkpoint.
+    # Every quarter of the window carries a step, so no stratum holds both classes and the area
+    # under the curve is undefined. An undefined score must not overwrite the checkpoint.
     cache_root, records, vocabulary = _corpus(tmp_path, rows=WINDOW_MEASURES * 4)
     output = tmp_path / 'chart.pt'
     measured = train_chart_model(

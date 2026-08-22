@@ -76,8 +76,8 @@ def test_a_pack_reaching_thirteen_is_on_the_modern_scale() -> None:
 
 
 def test_a_pack_that_straddles_the_two_is_left_out() -> None:
-    # Eleven or twelve says nothing: it is too high for the classic scale and
-    # too low to prove the modern one, so the conditioning would be a guess.
+    # Eleven or twelve says nothing: it is too high for the classic scale and too low to prove the
+    # modern one, so the conditioning would be a guess.
     assert pack_scales([_record('Ambiguous', 'a.sm', meters=(11,))]) == {}
 
 
@@ -138,28 +138,28 @@ def test_a_window_carries_both_heads_targets(tmp_path: Path) -> None:
 
 
 def test_a_chart_the_entry_does_not_hold_yields_empty_targets(tmp_path: Path) -> None:
-    # The manifest and the cache can disagree; a window still has to be shaped
-    # correctly rather than raising.
+    # The manifest and the cache can disagree; a window still has to be shaped correctly rather
+    # than raising.
     record = _record('Modern', _TRAINING, meters=(16,))
     record['charts'][0]['difficulty'] = 'Beginner'
     _write_entry(tmp_path, record)
     windows = ChartWindows(tmp_path, [record], _VOCABULARY)
     assert int((windows[0]['pattern_target'] != -100).sum()) == 0
-    # The prior counts only the charts it was asked about, so a mismatched
-    # entry contributes slot totals but no steps.
+    # The prior counts only the charts it was asked about, so a mismatched entry contributes slot
+    # totals but no steps.
     assert np.all(measure_prior(windows.examples) < 0.0)
 
 
 def test_a_held_out_window_is_never_mirrored(tmp_path: Path) -> None:
-    # Validation figures have to stay comparable across runs, so the identity
-    # reflection is the only one a held-out window ever sees.
+    # Validation figures have to stay comparable across runs, so the identity reflection is the
+    # only one a held-out window ever sees.
     records = [_record('Modern', f'/corpus/{n}.sm', meters=(16,)) for n in range(20)]
     for record in records:
         _write_entry(tmp_path, record)
     held = ChartWindows(tmp_path, records, _VOCABULARY, validation=True)
     assert MIRRORS[0] == (0, 1, 2, 3)
-    # Every row in the entry steps on the left panel; a reflection would move
-    # some of them to the right one.
+    # Every row in the entry steps on the left panel; a reflection would move some of them to the
+    # right one.
     left = _VOCABULARY.token_for((1, 0, 0, 0))
     tokens = held[0]['pattern_target'].numpy()
     assert set(tokens[tokens != -100].tolist()) == {left}
@@ -192,8 +192,8 @@ def test_the_prior_reflects_where_steps_actually_fall(tmp_path: Path) -> None:
     prior = measure_prior(windows.examples)
     assert prior.shape == (MEASURE_SLOTS,)
     assert np.all(np.isfinite(prior))
-    # Every note in the entry sits on a quarter, so quarters must outscore the
-    # positions between them.
+    # Every note in the entry sits on a quarter, so quarters must outscore the positions between
+    # them.
     assert prior[0] > prior[1]
 
 
@@ -204,8 +204,8 @@ def test_a_prior_over_nothing_is_still_finite() -> None:
 
 
 def test_every_worker_draws_its_own_windows(tmp_path: Path) -> None:
-    # A generator built in __init__ is copied into every worker along with its
-    # state, so all of them would draw the same window in lockstep.
+    # A generator built in __init__ is copied into every worker along with its state, so all of
+    # them would draw the same window in lockstep.
     record = _record('Modern', _TRAINING, meters=(16,))
     _write_entry(tmp_path, record)
     windows = ChartWindows(tmp_path, [record], _VOCABULARY)

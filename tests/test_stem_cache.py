@@ -172,8 +172,8 @@ def test_a_device_is_chosen_when_none_is_given(tmp_path: Path, mocker: MockerFix
 
 @pytest.mark.usefixtures('separated')
 def test_a_simfile_without_timing_yields_no_entry(tmp_path: Path, mocker: MockerFixture) -> None:
-    # The loaders raise rather than return a Simfile carrying no tempo, so the
-    # guard against one has to be reached directly.
+    # The loaders raise rather than return a Simfile carrying no tempo, so the guard against one
+    # has to be reached directly.
     record = _record(tmp_path)
     parsed = load_simfile(Path(record['simfile']))
     mocker.patch('smlab.stems.cache.load_simfile', return_value=replace(parsed, timing=None))

@@ -61,8 +61,8 @@ def test_features_span_every_stem_and_the_mixture() -> None:
 
 
 def test_a_missing_stem_is_filled_with_silence() -> None:
-    # Separation can fail for one layer; the block still has to be the right
-    # width or every downstream offset shifts.
+    # Separation can fail for one layer; the block still has to be the right width or every
+    # downstream offset shifts.
     mixture = _tone()
     partial = fine_features({STEM_NAMES[0]: _tone()}, mixture, _TIMING, sample_rate=_RATE)
     assert partial.shape[1] == TOTAL_CHANNELS
@@ -76,8 +76,8 @@ def test_a_loud_stem_reads_differently_from_a_silent_one() -> None:
 
 
 def test_loudness_tells_dead_air_from_music() -> None:
-    # Bands are measured against the loudest point of the song, so silence only
-    # reads as silence alongside the music it follows.
+    # Bands are measured against the loudest point of the song, so silence only reads as silence
+    # alongside the music it follows.
     both = np.concatenate([_tone(), np.zeros(_RATE * 2, dtype=np.float32)])
     loudness = mixture_loudness(fine_features({}, both, _TIMING, sample_rate=_RATE))
     half = len(loudness) // 2
@@ -86,8 +86,8 @@ def test_loudness_tells_dead_air_from_music() -> None:
 
 
 def test_a_sound_filling_one_band_is_not_mistaken_for_silence() -> None:
-    # Averaging the bands reads a held note or a solo instrument as dead air,
-    # because every band it does not occupy sits on the floor.
+    # Averaging the bands reads a held note or a solo instrument as dead air, because every band it
+    # does not occupy sits on the floor.
     both = np.concatenate([_tone(hertz=440.0), np.zeros(_RATE * 2, dtype=np.float32)])
     loudness = mixture_loudness(fine_features({}, both, _TIMING, sample_rate=_RATE))
     assert loudness[: len(loudness) // 2].min() > SILENT_DECIBELS

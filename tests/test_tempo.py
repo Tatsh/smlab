@@ -49,8 +49,8 @@ def test_a_tempo_close_to_a_round_one_is_snapped(value: float, wanted: float) ->
 
 
 def test_a_tempo_too_far_from_a_round_one_is_left_alone() -> None:
-    # Halves are 0.5 apart, so nothing sits more than 0.25 from one and the
-    # default tolerance snaps everything. Only a narrower window can refuse.
+    # Halves are 0.5 apart, so nothing sits more than 0.25 from one and the default tolerance snaps
+    # everything. Only a narrower window can refuse.
     assert snap_bpm(169.3, tolerance=0.1) == pytest.approx(169.3)
 
 
@@ -63,8 +63,8 @@ def test_a_steady_pulse_recovers_its_tempo() -> None:
 
 
 def test_an_envelope_shorter_than_the_excerpt_is_folded_whole() -> None:
-    # The coarse search folds a 25 s excerpt; a shorter envelope must still work
-    # rather than slicing itself away to nothing.
+    # The coarse search folds a 25 s excerpt; a shorter envelope must still work rather than
+    # slicing itself away to nothing.
     bpm, _ = estimate_tempo(
         _pulses(seconds=12.0).astype(np.float64), _RATE, min_bpm=60.0, max_bpm=300.0
     )
@@ -129,8 +129,8 @@ def test_a_tempo_outside_the_search_range_reports_nothing() -> None:
 
 
 def test_a_pulse_slower_than_the_excerpt_leaves_the_phase_alone() -> None:
-    # One beat per fifty seconds cannot be phase-refined inside a shorter
-    # envelope, so the offset stays where folding put it.
+    # One beat per fifty seconds cannot be phase-refined inside a shorter envelope, so the offset
+    # stays where folding put it.
     envelope = _pulses(bpm=1.2, seconds=30.0)
     found = estimate_timing_from_envelopes(
         Envelopes(phase=envelope, tempo=_pulses()), _RATE, min_bpm=1.0, max_bpm=2.0
@@ -139,8 +139,8 @@ def test_a_pulse_slower_than_the_excerpt_leaves_the_phase_alone() -> None:
 
 
 def test_a_flat_phase_envelope_still_yields_an_offset() -> None:
-    # Every fold total identical makes the parabolic peak fit degenerate, which
-    # must fall back rather than divide by zero.
+    # Every fold total identical makes the parabolic peak fit degenerate, which must fall back
+    # rather than divide by zero.
     found = estimate_timing_from_envelopes(
         Envelopes(phase=np.ones(int(_SECONDS * _RATE), dtype=np.float32), tempo=_pulses()), _RATE
     )
