@@ -84,7 +84,7 @@ def load_separator(device: torch.device) -> Separator:
     """
     try:
         from demucs.pretrained import get_model  # noqa: PLC0415
-    except ImportError as error:  # pragma: no cover - depends on the extra
+    except ImportError as error:
         msg = 'Install the stems extra to separate audio: pip install smlab[stems]'
         raise SeparationError(msg) from error
     model = get_model(_MODEL_NAME)

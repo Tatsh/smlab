@@ -134,10 +134,11 @@ def _layer_features(
         start = edges[index]
         stop = max(edges[index + 1], start + 1)
         output[index, :mels] = decibels[:, start:stop].mean(axis=1)
+        # The start edge is clipped inside the envelope and the stop edge is
+        # forced past it, so this slice never comes back empty.
         window = onset[start:stop]
-        if window.size:
-            output[index, mels] = window.mean()
-            output[index, mels + 1] = window.max()
+        output[index, mels] = window.mean()
+        output[index, mels + 1] = window.max()
     return output
 
 

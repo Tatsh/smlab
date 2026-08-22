@@ -169,10 +169,11 @@ def beat_features(
             break
         window = mel_db[:, start:stop]
         features[index, :N_MELS] = window.mean(axis=1)
+        # The envelope always holds at least one frame and the stop edge is
+        # forced past the start, so this slice never comes back empty.
         onset_window = envelope[min(start, len(envelope) - 1) : max(stop, start + 1)]
-        if onset_window.size:
-            features[index, N_MELS] = onset_window.mean()
-            features[index, N_MELS + 1] = onset_window.max()
+        features[index, N_MELS] = onset_window.mean()
+        features[index, N_MELS + 1] = onset_window.max()
     return features.astype(np.float16)
 
 
