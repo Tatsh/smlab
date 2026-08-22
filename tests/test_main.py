@@ -291,7 +291,7 @@ def test_a_song_folder_is_generated(runner: CliRunner, tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     assert 'Using supplied timing' in result.output
     written = tmp_path / 'out' / 'Song'
-    assert (written / 'Song.sm').is_file()
+    assert (written / 'Song.ssc').is_file()
     assert (written / 'Song.wav').is_file()
 
 
@@ -763,7 +763,7 @@ def test_an_untitled_song_is_named_after_its_file(runner: CliRunner, tmp_path: P
         ],
     )
     assert result.exit_code == 0, result.output
-    assert (tmp_path / 'out' / 'Nameless Track' / 'Nameless Track.sm').is_file()
+    assert (tmp_path / 'out' / 'Nameless Track' / 'Nameless Track.ssc').is_file()
 
 
 def test_analysing_reports_why_a_chart_is_not_danceable(runner: CliRunner, tmp_path: Path) -> None:
@@ -803,7 +803,7 @@ def test_a_preview_start_can_be_given_outright(runner: CliRunner, tmp_path: Path
     )
     assert result.exit_code == 0, result.output
     assert 'Preview starts at' not in result.output
-    assert '#SAMPLESTART:12.500' in (tmp_path / 'out' / 'Song' / 'Song.sm').read_text()
+    assert '#SAMPLESTART:12.500' in (tmp_path / 'out' / 'Song' / 'Song.ssc').read_text()
 
 
 def test_analysing_a_simfile_carrying_no_tempo_stops(
@@ -816,3 +816,32 @@ def test_analysing_a_simfile_carrying_no_tempo_stops(
     result = runner.invoke(main, ['analyze', str(path)])
     assert result.exit_code != 0
     assert 'No usable timing' in result.output
+
+
+@pytest.mark.usefixtures('generation')
+def test_a_sm_file_is_written_when_asked_for(runner: CliRunner, tmp_path: Path) -> None:
+    result = runner.invoke(
+        main,
+        [
+            'generate',
+            str(_audio(tmp_path / 'song.wav')),
+            '-o',
+            str(tmp_path / 'out'),
+            '-T',
+            'Song',
+            '-c',
+            str(_checkpoints(tmp_path)),
+            '-D',
+            'Easy',
+            '--nps',
+            '2',
+            '--bpm',
+            str(_BPM),
+            '--offset',
+            '0',
+            '--sm',
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert (tmp_path / 'out' / 'Song' / 'Song.sm').is_file()
+    assert not (tmp_path / 'out' / 'Song' / 'Song.ssc').exists()

@@ -22,6 +22,7 @@ from .chart_image import Heading, write_chart
 from .corpus import EXCLUDED_PACKS, scan_corpus, write_manifest
 from .dataset import CODE_BY_CHAR, SUBDIVISIONS_PER_BEAT, beat_features
 from .encoder import EncoderConfig
+from .features import FINE_SUBDIVISIONS
 from .generate import (
     CLASSIC_SCALE,
     DEFAULT_BALANCE,
@@ -60,7 +61,7 @@ from .weights import (
     resolve_weights,
     weights_repository,
 )
-from .writer import SongMetadata, write_song
+from .writer import Format, SongMetadata, write_song
 
 __all__ = (
     'DEFAULT_METERS',
@@ -628,6 +629,10 @@ def _load_chart_model(
 )
 @click.option('--svg/--png', default=False, help='Draw charts as SVG instead of PNG.')
 @click.option(
+    '--ssc', 'fmt', flag_value='ssc', default=True, help='Write a .ssc simfile. The default.'
+)
+@click.option('--sm', 'fmt', flag_value='sm', help='Write a .sm simfile instead of a .ssc.')
+@click.option(
     '--balance',
     default=DEFAULT_BALANCE,
     help=(
@@ -727,6 +732,7 @@ def generate(  # noqa: PLR0917
     svg: bool,  # noqa: FBT001
     balance: float,
     crossovers: float | None,
+    fmt: Format,
     triplets: bool,  # noqa: FBT001
     mines: bool,  # noqa: FBT001
     rolls: bool,  # noqa: FBT001
@@ -823,7 +829,8 @@ def generate(  # noqa: PLR0917
         f'Metadata: {metadata.title!r} by {metadata.artist or "unknown"}'
         f'{f" [{metadata.genre}]" if metadata.genre else ""}.'
     )
-    simfile = write_song(metadata, audio, timing, charts, output_dir)
+    seconds = timing.time_at_beat(features.shape[0] / FINE_SUBDIVISIONS)
+    simfile = write_song(metadata, audio, timing, charts, output_dir, fmt, seconds)
     click.echo(f'Wrote {simfile.parent} containing {simfile.name} and the audio.')
     for name, rating, rows in charts if image else ():
         pictures = simfile.parent / IMAGE_DIRECTORY

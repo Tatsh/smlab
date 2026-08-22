@@ -24,6 +24,7 @@ aꪼmz
 aᏽؓؽg
 bascom
 beatdown
+bgchanges
 biasq
 bpms
 brʼb
@@ -32,11 +33,16 @@ byteorder
 bﴼer
 cǽݯm
 ccollections
+cdimage
 cdrommsf
 cdtitle
 ceټr
 changebpm
 charliermarsh
+charthash
+chartname
+chartstyle
+charttype
 chunksize
 chڼs
 codesign
@@ -59,6 +65,7 @@ dejavu
 delenv
 demucs
 dʻcx
+discimage
 displaybpm
 dּjg
 docstrings
@@ -128,6 +135,7 @@ kiܼgh
 kwargs
 kμbru
 lastexitcode
+lastsecondhint
 launchable
 lextudio
 libera
@@ -138,6 +146,7 @@ lּkz
 lnڼwz
 luټr
 lvʺo
+lyricspath
 lмxؒ
 lռlqѽ
 lڼwb
@@ -149,6 +158,7 @@ megapacks
 mels
 melspectrogram
 metadataq
+meterf
 minipack
 mktemp
 mkػs
@@ -195,6 +205,7 @@ pavelzw
 pipx
 plistlib
 preapproved
+previewvid
 prodvers
 pycache
 pydantic
@@ -215,6 +226,7 @@ qȼٻq
 q̽fb
 qhϼs
 qtٻl
+radarvalues
 randn
 recurrentq
 regen
@@ -260,6 +272,7 @@ soundfile
 soupsieve
 sphinxcontrib
 statusline
+stepfile
 stepmania
 stepstype
 storageq
@@ -276,6 +289,9 @@ sϼsɐ
 taka
 tatsh
 testpaths
+tickcount
+tickcounts
+timesignatures
 titletranslit
 tomllib
 tomlq
@@ -320,6 +336,7 @@ wùot
 wzмk
 xcrun
 xļnٲ
+xscrolls
 yapf
 yarnrc
 yܼcf
