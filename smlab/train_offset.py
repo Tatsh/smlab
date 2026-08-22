@@ -296,19 +296,19 @@ def train_offset_model(
     }
     model = OffsetModel().to(device)
     log.info('Model has %.2f M parameters.', sum(p.numel() for p in model.parameters()) / 1e6)
-    optimiser = torch.optim.AdamW(model.parameters(), lr=settings.learning_rate)
-    schedule = torch.optim.lr_scheduler.CosineAnnealingLR(optimiser, settings.epochs)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=settings.learning_rate)
+    schedule = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, settings.epochs)
     best: dict[str, float] = {'within_one_bin': 0.0}
     for epoch in range(settings.epochs):
         model.train()
         total = 0.0
         for profile, phase in loaders['train']:
-            optimiser.zero_grad(set_to_none=True)
+            optimizer.zero_grad(set_to_none=True)
             loss = nn.functional.cross_entropy(
                 model(profile.to(device)), phase.to(device), label_smoothing=0.05
             )
             loss.backward()  # type: ignore[no-untyped-call]
-            optimiser.step()
+            optimizer.step()
             total += float(loss)
         schedule.step()
         model.eval()

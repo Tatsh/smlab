@@ -16,9 +16,11 @@ from smlab.writer import (
     chart_hash,
     measure_text,
     radar_values,
+    render_dwi,
     render_simfile,
     render_ssc,
     safe_directory_name,
+    step_stream,
     write_song,
 )
 import pytest
@@ -397,3 +399,95 @@ def test_rolls_and_lifts_are_counted_apart_from_taps() -> None:
     assert values[8] == 0
     assert values[11] == 1
     assert values[12] == 1
+
+
+def _dwi(rows: list[tuple[int, list[int]]], difficulty: str = 'Challenge') -> str:
+    return render_dwi(
+        SongMetadata(artist='Someone', music='Song.mp3', title='Song'),
+        _TIMING,
+        [(difficulty, 9, rows)],
+    )
+
+
+def test_a_bare_character_covers_an_eighth_of_a_measure() -> None:
+    # Four beats to a measure at the default step means eight characters.
+    assert step_stream([(0, [1, 0, 0, 0])]) == '40000000'
+
+
+@pytest.mark.parametrize(
+    ('panels', 'expected'),
+    [
+        ([1, 0, 0, 0], '4'),
+        ([0, 1, 0, 0], '2'),
+        ([0, 0, 1, 0], '8'),
+        ([0, 0, 0, 1], '6'),
+        ([1, 1, 0, 0], '1'),
+        ([0, 1, 0, 1], '3'),
+        ([1, 0, 1, 0], '7'),
+        ([0, 0, 1, 1], '9'),
+        ([0, 1, 1, 0], 'A'),
+        ([1, 0, 0, 1], 'B'),
+    ],
+)
+def test_each_panel_pair_has_its_own_character(panels: list[int], expected: str) -> None:
+    assert step_stream([(0, panels)]).startswith(expected)
+
+
+def test_a_chord_of_three_becomes_an_angle_group() -> None:
+    # One character carries two panels at most, so more than that has to be spelled out.
+    assert step_stream([(0, [1, 1, 1, 0])]).startswith('<428>')
+
+
+def test_a_freeze_is_marked_where_it_starts_and_closed_by_a_later_step() -> None:
+    # The tail is an ordinary step, which the reader consumes to end the freeze.
+    assert step_stream([(0, [2, 0, 0, 0]), (24, [3, 0, 0, 0])]) == '4!40004000'
+
+
+def test_a_measure_of_sixteenths_is_bracketed() -> None:
+    stream = step_stream([(0, [1, 0, 0, 0]), (3, [0, 1, 0, 0])])
+    assert stream.startswith('(42')
+    assert stream.endswith(')')
+
+
+def test_a_measure_of_twelfths_is_bracketed() -> None:
+    stream = step_stream([(0, [1, 0, 0, 0]), (2, [0, 1, 0, 0])])
+    assert stream.startswith('[42')
+    assert stream.endswith(']')
+
+
+def test_a_row_finer_than_a_twelfth_falls_back_to_ticks() -> None:
+    # Nothing between a twenty-fourth and a hundred and ninety-second divides the grid.
+    stream = step_stream([(0, [1, 0, 0, 0]), (1, [0, 1, 0, 0])])
+    assert stream.startswith('`4000200')
+    assert stream.endswith("'")
+
+
+def test_mines_and_lifts_are_dropped() -> None:
+    # Neither has a spelling in this format.
+    assert step_stream([(0, [5, 0, 6, 0])]) == '00000000'
+
+
+def test_the_gap_is_whole_milliseconds_of_the_opposite_sign() -> None:
+    assert '#GAP:48;' in _dwi([(0, [1, 0, 0, 0])])
+
+
+def test_the_difficulty_is_written_under_its_own_name() -> None:
+    assert '#SINGLE:SMANIAC:9:' in _dwi([(0, [1, 0, 0, 0])])
+    assert '#SINGLE:BASIC:9:' in _dwi([(0, [1, 0, 0, 0])], 'Easy')
+    assert '#SINGLE:EDIT:9:' in _dwi([(0, [1, 0, 0, 0])], 'Ultra')
+
+
+def test_the_dwi_header_carries_the_song_fields() -> None:
+    text = _dwi([(0, [1, 0, 0, 0])])
+    for tag in ('#TITLE:Song;', '#ARTIST:Someone;', '#FILE:Song.mp3;', '#BPM:150.000;'):
+        assert tag in text
+
+
+def test_a_dwi_file_is_written_when_asked_for(tmp_path: Path) -> None:
+    audio = tmp_path / 'Song.ogg'
+    audio.write_bytes(b'')
+    written = write_song(
+        SongMetadata(title='Song'), audio, _TIMING, [('Easy', 3, [])], tmp_path, 'dwi'
+    )
+    assert written.suffix == '.dwi'
+    assert '#SINGLE:BASIC:3:' in written.read_text()

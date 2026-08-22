@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 __all__ = (
-    'ASSET_PACKAGE',
+    'ASSET_DIRECTORY',
     'PREVIEW_ASSET',
     'VOCABULARY_ASSET',
     'asset_bytes',
@@ -35,8 +35,9 @@ __all__ = (
 
 log = logging.getLogger(__name__)
 
-ASSET_PACKAGE = 'smlab.assets'
-"""Package holding the bundled models.
+_PACKAGE = 'smlab'
+ASSET_DIRECTORY = 'assets'
+"""Directory inside the package holding the bundled models.
 
 :meta hide-value:
 """
@@ -67,7 +68,7 @@ def has_asset(name: str) -> bool:
         True when the asset can be read.
     """
     try:
-        return resources.files(ASSET_PACKAGE).joinpath(name).is_file()
+        return resources.files(_PACKAGE).joinpath(ASSET_DIRECTORY, name).is_file()
     except (ModuleNotFoundError, FileNotFoundError):
         return False
 
@@ -92,7 +93,7 @@ def asset_bytes(name: str) -> bytes:
         If the package was built without the asset.
     """
     try:
-        return (resources.files(ASSET_PACKAGE) / name).read_bytes()
+        return (resources.files(_PACKAGE) / ASSET_DIRECTORY / name).read_bytes()
     except (ModuleNotFoundError, FileNotFoundError) as error:
         msg = f'{name} is not bundled with this installation of smlab.'
         raise FileNotFoundError(msg) from error

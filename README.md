@@ -41,15 +41,19 @@ which panels they use, both reading the same encoding of the music.
 smlab generate song.ogg -o /path/to/Pack -T "Song Title" -A "Artist"
 ```
 
-That writes `/path/to/Pack/Song Title/` containing `Song Title.sm` and a copy of the audio as
-`Song Title.ogg`.
+That writes `/path/to/Pack/Song Title/` containing `Song Title.ssc` and a copy of the audio as
+`Song Title.ogg`. `--format sm` and `--format dwi` write the older formats instead.
 
-**The chart and offset weights are downloaded on first use**, not bundled — together they are over
-150 MB. Set `SMLAB_WEIGHTS_REPO` to fetch them from somewhere other than the default, or pass
-`-c` to point at a local `checkpoints/` directory. Everything that does not need a model works
-without them: parsing, timing estimation, playability analysis, chart drawing.
+Only `.ssc` carries everything the generator works out. `.sm` has no per-chart tags, so the groove
+radar and the chart hash go unwritten, and `.dwi` additionally cannot indicate a mine, a lift, or a
+roll: mines and lifts are dropped and a roll becomes an ordinary freeze.
 
-## What it decides for you
+**The chart and offset weights are downloaded on first use**. Set `SMLAB_WEIGHTS_REPO` to fetch them
+from somewhere other than the default, or pass `-c` to point at a local `checkpoints/` directory.
+Everything that does not need a model works without them: parsing, timing estimation, playability
+analysis, chart drawing.
+
+## Automatically generated fields
 
 | Field                         | How it is chosen                                                                                                                          |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
@@ -61,10 +65,10 @@ without them: parsing, timing estimation, playability analysis, chart drawing.
 | `#CREDIT`                     | The current username.                                                                                                                     |
 | Steps                         | Placement and selection models, decoded under physical constraints.                                                                       |
 
-## Accuracy, measured on held-out songs
+## Accuracy
 
 None of these numbers come from the training split. The offset figures cover the songs whose tempo
-was recovered correctly, since a wrong tempo makes the offset meaningless.
+was recovered correctly.
 
 | Task                            | Result                 | Previous heuristic |
 | ------------------------------- | ---------------------- | ------------------ |
@@ -120,16 +124,14 @@ note rate over a one-second and a ten-second window exceeds what a dancer sustai
 against the corpus, it rates the keyboard megapacks 26.2% keyboard-only against 1.5% for arcade
 rips, and finds hand-chords in 10.9% of In The Groove charts against 0.0% for arcade.
 
-## Seeing the chart
+## Chart image
 
 ```shell
 smlab generate song.ogg --image      # while generating
 smlab image "Song/Song.sm"           # from an existing simfile
 ```
 
-Pictures go in `.images/` inside the song folder, one per chart, named so StepMania's scanner
-ignores them. PNG by default, `--svg` for vector. Note colour follows the StepMania convention, so
-the rhythm is readable at a glance.
+Pictures go in `.images/` inside the song folder, one per chart. PNG by default, `--svg` for vector.
 
 ## Timing conventions
 
@@ -141,11 +143,7 @@ still loads and plays, merely off-beat forever.
 | `#OFFSET` (`.sm`/`.ssc`) | Beat 0 occurs at `-OFFSET` seconds into the audio.          |
 | `#GAP` (`.dwi`)          | Whole milliseconds until beat 0, so `OFFSET = -GAP / 1000`. |
 
-The DWI conversion is verified against the 133 corpus song directories shipping both a `.dwi` and a
-`.sm` for the same song: 131 agree within 1 ms, and none would be improved by flipping the sign.
-
-One tempo is assumed for the whole song. Adding tempo changes was attempted and did not survive
-measurement; `smlab/tempo.py` records what was tried and the numbers that killed it.
+This tool does _not_ support detecting BPM changes nor does it insert freezes.
 
 ## Retraining
 
@@ -166,7 +164,7 @@ smlab vocab -c cache/stems                  # collect the note-row patterns
 smlab train                                 # the chart model
 ```
 
-The offset model reads its own, much smaller cache of onset envelopes, and needs no separation:
+The offset model reads its own smaller cache of onset envelopes and needs no separation:
 
 ```shell
 smlab envelopes && smlab train-offset
@@ -178,17 +176,18 @@ Pass `-c checkpoints` to `generate` to use locally trained models instead of dow
 ## Development
 
 ```shell
-uv sync --group dev --extra stems
+uv sync --all-groups --all-extras
 ```
+
+After making changes:
 
 ```shell
 uv run ruff format . && uv run ruff check . && uv run mypy smlab && uv run pytest
 ```
 
-torch is taken from PyPI, whose Linux wheels already carry CUDA, so a machine
-with an NVIDIA driver uses the GPU without any extra configuration. To build
-against something else — ROCm, a different CUDA release, or CPU only — install
-that variant over the top:
+torch is taken from PyPI, whose Linux wheels already carry CUDA, so a machine with an NVIDIA driver
+uses the GPU without any extra configuration. To build against something else — ROCm, a different
+CUDA release, or CPU only - install that variant over the top:
 
 ```shell
 uv pip install --torch-backend=rocm6.4 torch

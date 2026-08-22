@@ -136,7 +136,7 @@ def test_a_bracket_group_subdivides_the_beat(tmp_path: Path) -> None:
     assert [beat for beat, _ in _dwi_chart(tmp_path, '{46}').rows()] == [0.0, 0.0625]
 
 
-def test_quantisation_returns_to_what_it_was_after_a_group(tmp_path: Path) -> None:
+def test_quantization_returns_to_what_it_was_after_a_group(tmp_path: Path) -> None:
     beats = [beat for beat, _ in _dwi_chart(tmp_path, '(44)6').rows()]
     assert beats == [0.0, 0.25, 0.5]
 
@@ -145,7 +145,7 @@ def test_a_stray_closing_bracket_is_survived(tmp_path: Path) -> None:
     assert [beat for beat, _ in _dwi_chart(tmp_path, ')46').rows()] == [0.0, 0.5]
 
 
-def test_backticks_toggle_the_finest_quantisation(tmp_path: Path) -> None:
+def test_backticks_toggle_the_finest_quantization(tmp_path: Path) -> None:
     beats = [beat for beat, _ in _dwi_chart(tmp_path, '`44`6').rows()]
     assert beats[1] == pytest.approx(1.0 / 48.0)
     assert beats[2] == pytest.approx(2.0 / 48.0)
@@ -157,6 +157,18 @@ def test_an_angle_group_is_one_row_of_several_panels(tmp_path: Path) -> None:
     assert rows[0][1] == '1001'
 
 
+def test_an_angle_group_holding_a_zero_is_the_finest_quantization_instead(tmp_path: Path) -> None:
+    # The same bracket spells both a chord and 192nd notes; a zero before the closing bracket is
+    # what tells them apart, since a chord never names one.
+    beats = [row.beat for row in _dwi_chart(tmp_path, '<40006>4').rows()]
+    assert beats == pytest.approx([0.0, 4.0 / 48.0, 5.0 / 48.0])
+
+
+def test_quantization_returns_to_eighths_after_a_tick_group(tmp_path: Path) -> None:
+    beats = [row.beat for row in _dwi_chart(tmp_path, '<40006>44').rows()]
+    assert beats[-1] == pytest.approx(5.0 / 48.0 + 0.5)
+
+
 def test_an_unterminated_angle_group_stops_the_stream(tmp_path: Path) -> None:
     assert list(_dwi_chart(tmp_path, '4<6').rows()) == [(0.0, '1000')]
 
@@ -165,10 +177,21 @@ def test_a_digit_naming_two_panels_writes_both(tmp_path: Path) -> None:
     assert list(_dwi_chart(tmp_path, '1').rows()) == [(0.0, '1100')]
 
 
-def test_a_bang_opens_a_freeze_that_the_next_step_closes(tmp_path: Path) -> None:
-    rows = list(_dwi_chart(tmp_path, '4!4').rows())
-    assert rows[0][1] == '2000'
-    assert rows[1][1] == '3000'
+def test_a_bang_opens_a_freeze_that_a_later_step_closes(tmp_path: Path) -> None:
+    rows = list(_dwi_chart(tmp_path, '4!40004').rows())
+    assert [row.columns for row in rows] == ['2000', '3000']
+    assert [row.beat for row in rows] == [0.0, 2.0]
+
+
+def test_the_freeze_marker_does_not_advance_the_beat(tmp_path: Path) -> None:
+    # The panel after the bang names what is held; it is part of the same step rather than the
+    # next one, so the steps around it stay where they belong.
+    assert [row.beat for row in _dwi_chart(tmp_path, '4!46').rows()] == [0.0, 0.5]
+
+
+def test_a_freeze_may_be_marked_on_a_panel_the_step_does_not_name(tmp_path: Path) -> None:
+    rows = list(_dwi_chart(tmp_path, '0!40004').rows())
+    assert [row.columns for row in rows] == ['2000', '3000']
 
 
 def test_characters_that_mean_nothing_are_skipped(tmp_path: Path) -> None:

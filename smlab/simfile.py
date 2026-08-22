@@ -45,10 +45,10 @@ _DWI_DIFFICULTY = {
     'MANIAC': 'Hard',
     'SMANIAC': 'Challenge',
 }
-# DWI expresses quantisation with bracket groups; a bare character is an eighth
-# note, so each opener maps to its subdivision measured in beats.
-_DWI_OPENERS = {'(': 0.25, '[': 1.0 / 6.0, '{': 1.0 / 16.0}
-_DWI_CLOSERS = frozenset(')]}')
+# DWI expresses quantisation with bracket groups; a bare character is an eighth note, so each
+# opener maps to its subdivision measured in beats.
+_DWI_OPENERS = {'(': 0.25, '[': 1.0 / 6.0, '{': 1.0 / 16.0, '`': 1.0 / 48.0}
+_DWI_CLOSERS = frozenset(")]}'")
 _DWI_DEFAULT_STEP = 0.5
 _DWI_TICK_STEP = 1.0 / 48.0
 _SSC_CHART_TAGS = frozenset({'DESCRIPTION', 'DIFFICULTY', 'METER', 'STEPSTYPE'})
@@ -81,12 +81,62 @@ def _text(tags: Sequence[MsdTag], name: str) -> str:
     return ''
 
 
-def _dwi_events(stream: str) -> list[tuple[float, str, bool]]:
+def _dwi_step(stream: str, index: int) -> tuple[int, str, str]:
+    """
+    Read one step character and the freeze marker that may follow it.
+
+    A step is written as ``X`` or as ``X!Y``, where ``Y`` names the panels of ``X`` that begin a
+    freeze rather than being struck. The marker belongs to the step and does not advance the beat.
+
+    Parameters
+    ----------
+    stream : str
+        The raw DWI note stream for one chart.
+    index : int
+        Position of the step character.
+
+    Returns
+    -------
+    tuple[int, str, str]
+        Position just past what was read, the panels stepped, and those of them held.
+    """
+    stepped = _DWI_PANELS.get(stream[index].upper(), '')
+    index += 1
+    if index + 1 < len(stream) and stream[index] == '!':
+        return index + 2, stepped, _DWI_PANELS.get(stream[index + 1].upper(), '')
+    return index, stepped, ''
+
+
+def _dwi_is_tick(stream: str, index: int) -> bool:
+    """
+    Decide whether an angle bracket opens 192nd notes rather than a chord.
+
+    Parameters
+    ----------
+    stream : str
+        The raw DWI note stream for one chart.
+    index : int
+        Position just past the opening bracket.
+
+    Returns
+    -------
+    bool
+        True when a zero is reached before the closing bracket.
+    """
+    for character in stream[index:]:
+        if character == '>':
+            return False
+        if character == '0':
+            return True
+    return False
+
+
+def _dwi_events(stream: str) -> list[tuple[float, str, str]]:
     """
     Decode a DWI note stream into timed panel combinations.
 
-    Angle brackets combine several characters into one simultaneous step, and a
-    trailing exclamation mark marks the start of a hold.
+    Angle brackets combine several characters into one simultaneous step, and an exclamation mark
+    after a step marks the panels that begin a freeze.
 
     Parameters
     ----------
@@ -95,14 +145,13 @@ def _dwi_events(stream: str) -> list[tuple[float, str, bool]]:
 
     Returns
     -------
-    list[tuple[float, str, bool]]
-        Each event as its beat, the panels it uses, and whether it starts a hold.
+    list[tuple[float, str, str]]
+        Each event as its beat, the panels it steps on, and those of them that begin a freeze.
     """
-    events: list[tuple[float, str, bool]] = []
+    events: list[tuple[float, str, str]] = []
     stack: list[float] = []
     position = 0.0
     step = _DWI_DEFAULT_STEP
-    in_ticks = False
     index = 0
     while index < len(stream):
         character = stream[index]
@@ -113,27 +162,29 @@ def _dwi_events(stream: str) -> list[tuple[float, str, bool]]:
         elif character in _DWI_CLOSERS:
             step = stack.pop() if stack else _DWI_DEFAULT_STEP
             index += 1
-        elif character == '`':
-            # A backtick toggles 192nd notes rather than opening a pair.
-            in_ticks = not in_ticks
-            step = _DWI_TICK_STEP if in_ticks else _DWI_DEFAULT_STEP
-            index += 1
         elif character == '<':
+            if _dwi_is_tick(stream, index + 1):
+                stack.append(step)
+                step = _DWI_TICK_STEP
+                index += 1
+                continue
             if (closing := stream.find('>', index + 1)) < 0:
                 break
-            panels = ''.join(
-                _DWI_PANELS.get(inner.upper(), '') for inner in stream[index + 1 : closing]
-            )
+            stepped = holds = ''
+            inner = index + 1
+            while inner < closing:
+                inner, panels, held = _dwi_step(stream, inner)
+                stepped += panels
+                holds += held
             index = closing + 1
-            is_hold = index < len(stream) and stream[index] == '!'
-            index += int(is_hold)
-            events.append((position, ''.join(sorted(set(panels))), is_hold))
+            events.append((position, ''.join(sorted(set(stepped))), ''.join(sorted(set(holds)))))
             position += step
-        elif (mapped := _DWI_PANELS.get(character.upper())) is not None:
+        elif character == '>':
+            step = stack.pop() if stack else _DWI_DEFAULT_STEP
             index += 1
-            is_hold = index < len(stream) and stream[index] == '!'
-            index += int(is_hold)
-            events.append((position, mapped, is_hold))
+        elif character.upper() in _DWI_PANELS:
+            index, stepped, holds = _dwi_step(stream, index)
+            events.append((position, stepped, holds))
             position += step
         else:
             index += 1
@@ -165,16 +216,16 @@ def _dwi_notes_to_sm(stream: str) -> str:
     total_rows = measures * rows_per_measure
     rows = [['0'] * 4 for _ in range(total_rows)]
     holds_open: dict[int, bool] = {}
-    for beat, panels, is_hold in events:
-        # The measure count is derived from the last event, so every row lands
-        # inside it.
+    for beat, panels, held in events:
+        # The measure count is derived from the last event, so every row lands inside it.
         row = round(beat * _DWI_ROWS_PER_BEAT)
-        for panel in panels:
+        # A freeze may be marked on a panel the step character itself does not name.
+        for panel in sorted(set(panels) | set(held)):
             column = _DWI_COLUMN[panel]
             if holds_open.get(column):
                 rows[row][column] = TAIL
                 holds_open[column] = False
-            elif is_hold:
+            elif panel in held:
                 rows[row][column] = HOLD_HEAD
                 holds_open[column] = True
             else:

@@ -503,7 +503,7 @@ def test_generation_without_the_stems_extra_stops(
     assert 'install the extra' in result.output
 
 
-def test_a_simfile_is_analysed(runner: CliRunner, tmp_path: Path) -> None:
+def test_a_simfile_is_analyzed(runner: CliRunner, tmp_path: Path) -> None:
     result = runner.invoke(main, ['analyze', str(_simfile(tmp_path))])
     assert result.exit_code == 0
     assert 'Test Song' in result.output
@@ -511,7 +511,7 @@ def test_a_simfile_is_analysed(runner: CliRunner, tmp_path: Path) -> None:
     assert 'BPM 150.00-150.00' in result.output
 
 
-def test_analysing_a_simfile_without_timing_stops(runner: CliRunner, tmp_path: Path) -> None:
+def test_analyzing_a_simfile_without_timing_stops(runner: CliRunner, tmp_path: Path) -> None:
     path = tmp_path / 'broken.sm'
     path.write_text('#TITLE:No Timing;')
     result = runner.invoke(main, ['analyze', str(path)])
@@ -766,7 +766,7 @@ def test_an_untitled_song_is_named_after_its_file(runner: CliRunner, tmp_path: P
     assert (tmp_path / 'out' / 'Nameless Track' / 'Nameless Track.ssc').is_file()
 
 
-def test_analysing_reports_why_a_chart_is_not_danceable(runner: CliRunner, tmp_path: Path) -> None:
+def test_analyzing_reports_why_a_chart_is_not_danceable(runner: CliRunner, tmp_path: Path) -> None:
     # A row needing three panels at once cannot be danced, and the report has
     # to say which rule it broke.
     hands = SM_TEXT.replace('1000\n0100\n0010\n0001', '1110\n0100\n0010\n0001')
@@ -806,7 +806,7 @@ def test_a_preview_start_can_be_given_outright(runner: CliRunner, tmp_path: Path
     assert '#SAMPLESTART:12.500' in (tmp_path / 'out' / 'Song' / 'Song.ssc').read_text()
 
 
-def test_analysing_a_simfile_carrying_no_tempo_stops(
+def test_analyzing_a_simfile_carrying_no_tempo_stops(
     runner: CliRunner, tmp_path: Path, mocker: MockerFixture
 ) -> None:
     # The loaders raise rather than return a Simfile with no tempo, so the
@@ -839,7 +839,8 @@ def test_a_sm_file_is_written_when_asked_for(runner: CliRunner, tmp_path: Path) 
             str(_BPM),
             '--offset',
             '0',
-            '--sm',
+            '--format',
+            'sm',
         ],
     )
     assert result.exit_code == 0, result.output

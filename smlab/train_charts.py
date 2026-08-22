@@ -285,7 +285,7 @@ def train_chart_model(  # noqa: PLR0914
     )
     placement_loss = nn.BCEWithLogitsLoss()
     pattern_loss = nn.CrossEntropyLoss(ignore_index=-100)
-    optimiser = torch.optim.AdamW(model.parameters(), lr=settings.learning_rate, weight_decay=0.01)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=settings.learning_rate, weight_decay=0.01)
     steps = max(len(train_loader) * settings.epochs, 1)
 
     def rate(step: int) -> float:
@@ -294,14 +294,14 @@ def train_chart_model(  # noqa: PLR0914
         progress = (step - settings.warmup) / max(steps - settings.warmup, 1)
         return 0.5 * (1.0 + math.cos(math.pi * min(progress, 1.0)))
 
-    schedule = torch.optim.lr_scheduler.LambdaLR(optimiser, rate)
+    schedule = torch.optim.lr_scheduler.LambdaLR(optimizer, rate)
     best: dict[str, float] = {'quarter_auc': 0.0}
     for epoch in range(settings.epochs):
         model.train()
         running = 0.0
         seen = 0
         for batch in train_loader:
-            optimiser.zero_grad(set_to_none=True)
+            optimizer.zero_grad(set_to_none=True)
             with torch.autocast('cuda', dtype=torch.bfloat16, enabled=device.type == 'cuda'):
                 encoded = model.encode(
                     batch['features'].to(device),
@@ -320,7 +320,7 @@ def train_chart_model(  # noqa: PLR0914
                 )
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            optimiser.step()
+            optimizer.step()
             schedule.step()
             running += float(loss.item())
             seen += 1

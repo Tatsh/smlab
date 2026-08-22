@@ -388,7 +388,7 @@ def envelopes_command(manifest: Path, output: Path) -> None:
     help='Directory to write the checkpoint into.',
 )
 @click.option('-e', '--epochs', default=60, help='Passes over the song list.')
-@click.option('-b', '--batch-size', default=64, help='Profiles per optimiser step.')
+@click.option('-b', '--batch-size', default=64, help='Profiles per optimizer step.')
 def train_offset_command(cache_dir: Path, output: Path, epochs: int, batch_size: int) -> None:
     """Train the model that places the downbeat."""
     output.mkdir(parents=True, exist_ok=True)
@@ -458,7 +458,7 @@ def stems_command(manifest: Path, output: Path) -> None:
     help='Directory to write checkpoints into.',
 )
 @click.option('-e', '--epochs', default=40, help='Passes over the chart list.')
-@click.option('-b', '--batch-size', default=8, help='Windows per optimiser step.')
+@click.option('-b', '--batch-size', default=8, help='Windows per optimizer step.')
 @click.option('-w', '--workers', default=6, help='Loader worker processes.')
 @click.option('--limit', default=0, help='Cap on charts loaded, for quick runs.')
 def train(
@@ -628,9 +628,14 @@ def _load_chart_model(
 )
 @click.option('--svg/--png', default=False, help='Draw charts as SVG instead of PNG.')
 @click.option(
-    '--ssc', 'fmt', flag_value='ssc', default=True, help='Write a .ssc simfile. The default.'
+    '-f',
+    '--format',
+    'fmt',
+    default='ssc',
+    help='Simfile format to write.',
+    show_default=True,
+    type=click.Choice(('dwi', 'sm', 'ssc')),
 )
-@click.option('--sm', 'fmt', flag_value='sm', help='Write a .sm simfile instead of a .ssc.')
 @click.option(
     '--balance',
     default=DEFAULT_BALANCE,

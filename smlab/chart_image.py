@@ -58,7 +58,7 @@ _MINE = 5
 _HEADS = frozenset({_HOLD_HEAD, _ROLL_HEAD})
 _ROTATION = (270, 180, 0, 90)
 """Degrees to turn an up arrow by for each of the left, down, up, right lanes."""
-_COLOURS = {
+_COLORS = {
     0: '#e8443c',
     6: '#3d6fe0',
     4: '#a259e6',
@@ -73,19 +73,19 @@ Note colour by position within the beat, on the twelfth-of-a-beat grid.
 
 Quarters are red, eighths blue, twelfths purple, sixteenths yellow and
 twenty-fourths pink, following StepMania. Anything finer falls through to
-:py:data:`_FINE_COLOUR`.
+:py:data:`_FINE_COLOR`.
 """
-_FINE_COLOUR = '#4cc76a'
-_MINE_COLOUR = '#8d8d99'
-_HOLD_COLOUR = '#4cc76a'
-_ROLL_COLOUR = '#c8c8d2'
+_FINE_COLOR = '#4cc76a'
+_MINE_COLOR = '#8d8d99'
+_HOLD_COLOR = '#4cc76a'
+_ROLL_COLOR = '#c8c8d2'
 _PAGE = '#111116'
 _ODD_MEASURE = '#1b1b22'
 _EVEN_MEASURE = '#212129'
 _MEASURE_EDGE = '#33333f'
 _BEAT_LINE = '#2b2b35'
-_NUMBER_COLOUR = '#6a6a7a'
-_TITLE_COLOUR = '#e6e6ee'
+_NUMBER_COLOR = '#6a6a7a'
+_TITLE_COLOR = '#e6e6ee'
 _ARROW_POINTS = ((0, -7), (7, 0), (3, 0), (3, 7), (-3, 7), (-3, 0), (-7, 0))
 _ARROW_SCALE = 1.25
 _FONTS = (
@@ -115,7 +115,7 @@ class Line(NamedTuple):
     y1: float
     x2: float
     y2: float
-    colour: str
+    color: str
 
 
 class Arrow(NamedTuple):
@@ -133,7 +133,7 @@ class Ring(NamedTuple):
     x: float
     y: float
     radius: float
-    colour: str
+    color: str
 
 
 class Text(NamedTuple):
@@ -142,7 +142,7 @@ class Text(NamedTuple):
     x: float
     y: float
     size: int
-    colour: str
+    color: str
     content: str
     anchor: str = 'start'
 
@@ -243,7 +243,7 @@ def _grid(measures: int) -> Iterable[Shape]:
         for beat in range(1, _BEATS_PER_MEASURE):
             line = top + beat * _BEAT_HEIGHT
             yield Line(left, line, left + _LANES * _LANE, line, _BEAT_LINE)
-        yield Text(left - 4, top + 11, 9, _NUMBER_COLOUR, str(measure + 1), anchor='end')
+        yield Text(left - 4, top + 11, 9, _NUMBER_COLOR, str(measure + 1), anchor='end')
 
 
 def _note(lane: int, slot: int, code: int) -> Shape:
@@ -267,11 +267,11 @@ def _note(lane: int, slot: int, code: int) -> Shape:
     left, top = _position(slot)
     centre = left + lane * _LANE + _LANE / 2
     if code == _MINE:
-        return Ring(centre, top, 7, _MINE_COLOUR)
-    colour = _COLOURS.get(slot % SUBDIVISIONS_PER_BEAT, _FINE_COLOUR)
+        return Ring(centre, top, 7, _MINE_COLOR)
+    color = _COLORS.get(slot % SUBDIVISIONS_PER_BEAT, _FINE_COLOR)
     if code == _ROLL_HEAD:
-        colour = '#f0f0f4'
-    return Arrow(centre, top, _ROTATION[lane], colour)
+        color = '#f0f0f4'
+    return Arrow(centre, top, _ROTATION[lane], color)
 
 
 def _body(lane: int, start: int, stop: int, code: int) -> Iterable[Shape]:
@@ -294,7 +294,7 @@ def _body(lane: int, start: int, stop: int, code: int) -> Iterable[Shape]:
     Shape
         One rectangle per measure the freeze covers.
     """
-    colour = _ROLL_COLOUR if code == _ROLL_HEAD else _HOLD_COLOUR
+    color = _ROLL_COLOR if code == _ROLL_HEAD else _HOLD_COLOR
     measure = start // _SLOTS_PER_MEASURE
     # The tail slot ends the freeze rather than carrying any of it, so a freeze
     # stopping on a bar line covers nothing of the measure that line opens.
@@ -306,7 +306,7 @@ def _body(lane: int, start: int, stop: int, code: int) -> Iterable[Shape]:
         if tail % _SLOTS_PER_MEASURE == 0:
             bottom += _BEAT_HEIGHT / SUBDIVISIONS_PER_BEAT
         centre = left + lane * _LANE + _LANE / 2
-        yield Rect(centre - 5, top, 10, max(bottom - top, 1.0), colour, radius=4.0, opacity=0.55)
+        yield Rect(centre - 5, top, 10, max(bottom - top, 1.0), color, radius=4.0, opacity=0.55)
         measure += 1
 
 
@@ -338,7 +338,7 @@ def layout(rows: Sequence[tuple[int, Sequence[int]]], heading: Heading) -> Page:
     )
     shapes: list[Shape] = [
         Rect(0, 0, width, height, _PAGE),
-        Text(_MARGIN, 20, 14, _TITLE_COLOUR, banner),
+        Text(_MARGIN, 20, 14, _TITLE_COLOR, banner),
         *_grid(measures),
     ]
     open_freezes: dict[int, tuple[int, int]] = {}
@@ -438,7 +438,7 @@ def _svg_shape(shape: Shape) -> str:
         case Line():
             return (
                 f'<line x1="{shape.x1:.1f}" y1="{shape.y1:.1f}" x2="{shape.x2:.1f}" '
-                f'y2="{shape.y2:.1f}" stroke="{shape.colour}"/>'
+                f'y2="{shape.y2:.1f}" stroke="{shape.color}"/>'
             )
         case Arrow():
             points = ' '.join(f'{x:.1f},{y:.1f}' for x, y in _arrow_points(shape))
@@ -449,14 +449,14 @@ def _svg_shape(shape: Shape) -> str:
         case Ring():
             return (
                 f'<circle cx="{shape.x:.1f}" cy="{shape.y:.1f}" r="{shape.radius}" '
-                f'fill="none" stroke="{shape.colour}" stroke-width="2.5" stroke-dasharray="3 2"/>'
+                f'fill="none" stroke="{shape.color}" stroke-width="2.5" stroke-dasharray="3 2"/>'
             )
         case _:
             anchor = f' text-anchor="{shape.anchor}"' if shape.anchor != 'start' else ''
             family = 'monospace' if shape.anchor == 'end' else 'sans-serif'
             return (
                 f'<text x="{shape.x:.1f}" y="{shape.y:.1f}" font-size="{shape.size}" '
-                f'fill="{shape.colour}"{anchor} font-family="{family}">'
+                f'fill="{shape.color}"{anchor} font-family="{family}">'
                 f'{escape(shape.content)}</text>'
             )
 
@@ -527,7 +527,7 @@ def _write_png(destination: Path, page: Page) -> None:
                 else:
                     draw.rectangle(box, fill=fill, outline=shape.outline)
             case Line():
-                draw.line((shape.x1, shape.y1, shape.x2, shape.y2), fill=shape.colour)
+                draw.line((shape.x1, shape.y1, shape.x2, shape.y2), fill=shape.color)
             case Arrow():
                 draw.polygon(_arrow_points(shape), fill=shape.fill, outline='#101014')
             case Ring():
@@ -538,27 +538,27 @@ def _write_png(destination: Path, page: Page) -> None:
                         shape.x + shape.radius,
                         shape.y + shape.radius,
                     ),
-                    outline=shape.colour,
+                    outline=shape.color,
                     width=2,
                 )
             case _:
                 draw.text(
                     (shape.x, shape.y),
                     shape.content,
-                    fill=shape.colour,
+                    fill=shape.color,
                     font=_load_font(shape.size),
                     anchor='rs' if shape.anchor == 'end' else 'ls',
                 )
     image.save(destination)
 
 
-def _rgba(colour: str, opacity: float) -> tuple[int, int, int, int]:
+def _rgba(color: str, opacity: float) -> tuple[int, int, int, int]:
     """
     Turn a hex colour and an opacity into a Pillow colour.
 
     Parameters
     ----------
-    colour : str
+    color : str
         A ``#rrggbb`` string.
     opacity : float
         Alpha between zero and one.
@@ -568,6 +568,6 @@ def _rgba(colour: str, opacity: float) -> tuple[int, int, int, int]:
     tuple[int, int, int, int]
         Red, green, blue and alpha.
     """
-    value = colour.lstrip('#')
+    value = color.lstrip('#')
     red, green, blue = (int(value[index : index + 2], 16) for index in (0, 2, 4))
     return red, green, blue, round(255 * opacity)

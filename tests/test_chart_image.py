@@ -22,7 +22,7 @@ def _parse(document: str) -> ET.Element:
     return ET.fromstring(document)  # noqa: S314
 
 
-def _arrow_colour(root: ET.Element) -> str | None:
+def _arrow_color(root: ET.Element) -> str | None:
     return next(node.get('fill') for node in root.iter() if node.tag.endswith('polygon'))
 
 
@@ -55,13 +55,13 @@ def test_each_lane_is_turned_a_different_way() -> None:
     assert len(turns) == 4
 
 
-def test_subdivision_decides_colour() -> None:
-    # Quarter red, eighth blue, sixteenth yellow. Sharing a colour would hide
-    # the rhythm the picture exists to show.
+def test_subdivision_decides_color() -> None:
+    # Quarter red, eighth blue, sixteenth yellow. Sharing a colour would hide the rhythm the
+    # picture exists to show.
     rows = [(0, [1, 0, 0, 0]), (6, [1, 0, 0, 0]), (3, [1, 0, 0, 0])]
     root = _parse(render_chart(rows, _HEADING))
-    colours = {node.get('fill') for node in root.iter() if node.tag.endswith('polygon')}
-    assert len(colours) == 3
+    colors = {node.get('fill') for node in root.iter() if node.tag.endswith('polygon')}
+    assert len(colors) == 3
 
 
 def test_a_freeze_draws_a_body_between_head_and_tail() -> None:
@@ -138,7 +138,7 @@ def test_a_mine_is_drawn_as_a_ring() -> None:
 def test_a_roll_head_is_drawn_apart_from_a_tap() -> None:
     tap = _parse(render_chart([(0, [1, 0, 0, 0])], _HEADING))
     roll = _parse(render_chart([(0, [4, 0, 0, 0])], _HEADING))
-    assert _arrow_colour(tap) != _arrow_colour(roll)
+    assert _arrow_color(tap) != _arrow_color(roll)
 
 
 def test_measure_numbers_are_written_down_the_side() -> None:
