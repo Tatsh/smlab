@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+import torch
+
 from smlab.preview import PreviewModel
 from smlab.resources import (
     PREVIEW_ASSET,
@@ -13,8 +16,6 @@ from smlab.resources import (
     load_state_dict,
     load_vocabulary,
 )
-import pytest
-import torch
 
 if TYPE_CHECKING:
     from pathlib import Path

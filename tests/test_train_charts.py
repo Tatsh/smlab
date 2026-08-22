@@ -7,20 +7,21 @@ from typing import TYPE_CHECKING, cast
 import json
 import math
 
+import numpy as np
+import pytest
+import torch
+
 from smlab.cache import cache_path_for
-from smlab.chart_data import WINDOW_MEASURES, ChartExample
+from smlab.chart.data import WINDOW_MEASURES, ChartExample
 from smlab.encoder import MEASURE_SLOTS, EncoderConfig
 from smlab.features import TOTAL_CHANNELS
-from smlab.train_charts import (
+from smlab.train.charts import (
     ChartTrainingConfig,
     stratified_auc,
     style_sampler,
     train_chart_model,
 )
 from smlab.vocab import Vocabulary, encode_row
-import numpy as np
-import pytest
-import torch
 
 if TYPE_CHECKING:
     from smlab.typing import SongRecord

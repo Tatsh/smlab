@@ -5,8 +5,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 import json
 
+import numpy as np
+import pytest
+
 from smlab.cache import cache_path_for
-from smlab.chart_data import (
+from smlab.chart.data import (
     MIRRORS,
     WINDOW_MEASURES,
     WINDOW_STEPS,
@@ -17,8 +20,6 @@ from smlab.chart_data import (
 from smlab.encoder import MAX_METER, MAX_RATE, MEASURE_SLOTS
 from smlab.features import TOTAL_CHANNELS
 from smlab.vocab import Vocabulary, encode_row
-import numpy as np
-import pytest
 
 if TYPE_CHECKING:
     from pathlib import Path

@@ -5,11 +5,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 import sys
 
-from smlab.stems import STEM_NAMES, SeparationError, load_separator, separate
 import numpy as np
 import pytest
 import soundfile as sf  # type: ignore[import-untyped]  # No stubs are published.
 import torch
+
+from smlab.stems import STEM_NAMES, SeparationError, load_separator, separate
 
 if TYPE_CHECKING:
     from pathlib import Path

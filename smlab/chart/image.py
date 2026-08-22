@@ -20,7 +20,7 @@ import math
 
 from PIL import Image, ImageDraw, ImageFont
 
-from .dataset import SUBDIVISIONS_PER_BEAT
+from smlab.dataset import SUBDIVISIONS_PER_BEAT
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence

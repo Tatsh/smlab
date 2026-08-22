@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
+import pytest
+import soundfile as sf  # type: ignore[import-untyped]  # No stubs are published.
+
 from smlab.chart import DIFFICULTIES, Chart
 from smlab.dataset import (
     CODE_BY_CHAR,
@@ -17,9 +21,6 @@ from smlab.dataset import (
     placement_vector,
 )
 from smlab.timing import TimingData
-import numpy as np
-import pytest
-import soundfile as sf  # type: ignore[import-untyped]  # No stubs are published.
 
 if TYPE_CHECKING:
     from pathlib import Path

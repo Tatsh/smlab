@@ -26,8 +26,8 @@ from torch.utils.data import DataLoader, Dataset
 import numpy as np
 import torch
 
-from .audio import OnsetParams, load_audio
-from .offset import (
+from smlab.audio import OnsetParams, load_audio
+from smlab.offset import (
     BEATS_PER_MEASURE,
     EXCERPT_SECONDS,
     PHASE_BINS,

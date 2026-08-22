@@ -19,23 +19,25 @@ import librosa
 import numpy as np
 import torch
 
-from .audio import DEFAULT_SAMPLE_RATE
-from .cache import cache_path_for
-from .chart import DIFFICULTIES
-from .dataset import chart_targets
-from .features import TOTAL_CHANNELS, fine_features
-from .simfile import SimfileError, load_simfile
-from .stems import SeparationError, load_separator, separate
+from smlab.audio import DEFAULT_SAMPLE_RATE
+from smlab.cache import cache_path_for
+from smlab.chart import DIFFICULTIES
+from smlab.dataset import chart_targets
+from smlab.features import TOTAL_CHANNELS, fine_features
+from smlab.simfile import SimfileError, load_simfile
+
+from .separate import SeparationError, load_separator, separate
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
     from numpy.typing import NDArray
 
-    from .stems import Separator
-    from .typing import SongRecord
+    from smlab.typing import SongRecord
 
-__all__ = ('build_stem_cache', 'stem_cache_entry')
+    from .separate import Separator
+
+__all__ = ('build_stem_cache', 'cache_channels', 'stem_cache_entry')
 
 log = logging.getLogger(__name__)
 

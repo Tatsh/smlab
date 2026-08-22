@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import numpy as np
+import pytest
+import torch
+
 from smlab.encoder import MEASURE_SLOTS, EncoderConfig
 from smlab.features import TOTAL_CHANNELS
 from smlab.heads import (
@@ -12,9 +16,6 @@ from smlab.heads import (
     SelectionHead,
     metric_prior_logits,
 )
-import numpy as np
-import pytest
-import torch
 
 _WIDTH = 24
 _VOCABULARY = 7

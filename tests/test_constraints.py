@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import numpy as np
+import pytest
+
 from smlab.constraints import (
     Budget,
     allowed,
@@ -15,8 +18,6 @@ from smlab.constraints import (
 from smlab.encoder import MEASURE_SLOTS
 from smlab.generate import GenerationConfig
 from smlab.vocab import Vocabulary, encode_row
-import numpy as np
-import pytest
 
 _LEFT, _DOWN, _UP, _RIGHT = range(4)
 _PANEL_INDEX = {'L': _LEFT, 'D': _DOWN, 'U': _UP, 'R': _RIGHT}

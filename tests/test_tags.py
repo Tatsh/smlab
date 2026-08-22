@@ -6,9 +6,10 @@ from typing import TYPE_CHECKING
 
 from mutagen.id3 import ID3, TCON, TIT2, TPE1
 from mutagen.oggvorbis import OggVorbis
+import pytest
+
 from smlab.tags import apply_tags, read_tags
 from smlab.writer import SongMetadata
-import pytest
 
 if TYPE_CHECKING:
     from pathlib import Path

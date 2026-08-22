@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import numpy as np
+import pytest
+
 from smlab.encoder import MEASURE_SLOTS
 from smlab.generate import GenerationConfig
 from smlab.slots import choose_slots, fill, refill, seed_pulse, silence_threshold, tidy_rests
 from smlab.timing import TimingData
-import numpy as np
-import pytest
 
 _BPM = 150.0
 _TIMING = TimingData.constant(_BPM, 0.0)

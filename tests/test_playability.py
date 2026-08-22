@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from smlab.playability import (
     FOOT_STATES,
     MAX_FEET,
@@ -9,7 +11,6 @@ from smlab.playability import (
     analyze_rows,
     is_crossover,
 )
-import pytest
 
 TAP = 1
 HOLD = 2

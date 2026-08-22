@@ -6,17 +6,19 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from smlab.features import TOTAL_CHANNELS
-from smlab.simfile import load_simfile
-from smlab.stem_cache import build_stem_cache, cache_channels, stem_cache_entry
-from smlab.stems import STEM_NAMES, SeparationError
 import numpy as np
 import pytest
 import soundfile as sf  # type: ignore[import-untyped]  # No stubs are published.
 import torch
 
+from smlab.features import TOTAL_CHANNELS
+from smlab.simfile import load_simfile
+from smlab.stems import STEM_NAMES, SeparationError
+from smlab.stems.cache import build_stem_cache, cache_channels, stem_cache_entry
+
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
+
     from smlab.typing import SongRecord
 
 _RATE = 22050
@@ -58,7 +60,7 @@ def _record(tmp_path: Path, *, text: str = SM_TEXT, seconds: float = 16.0) -> So
 @pytest.fixture
 def separated(mocker: MockerFixture) -> None:
     mocker.patch(
-        'smlab.stem_cache.separate',
+        'smlab.stems.cache.separate',
         side_effect=lambda _model, path, _device: dict.fromkeys(
             STEM_NAMES, np.asarray(sf.read(path)[0], dtype=np.float32)
         ),
@@ -96,7 +98,7 @@ def test_a_malformed_simfile_yields_no_entry(tmp_path: Path) -> None:
 def test_a_song_that_cannot_be_separated_yields_no_entry(
     tmp_path: Path, mocker: MockerFixture
 ) -> None:
-    mocker.patch('smlab.stem_cache.separate', side_effect=SeparationError('no'))
+    mocker.patch('smlab.stems.cache.separate', side_effect=SeparationError('no'))
     assert stem_cache_entry(_record(tmp_path), _Model(), _CPU) is None
 
 
@@ -131,7 +133,7 @@ def test_a_chart_with_too_few_rows_is_left_out(tmp_path: Path) -> None:
 
 @pytest.mark.usefixtures('separated')
 def test_the_corpus_is_walked_and_written(tmp_path: Path, mocker: MockerFixture) -> None:
-    mocker.patch('smlab.stem_cache.load_separator', return_value=_Model())
+    mocker.patch('smlab.stems.cache.load_separator', return_value=_Model())
     root = tmp_path / 'cache'
     results = list(build_stem_cache([_record(tmp_path)], root, device=_CPU))
     assert results == [(str(tmp_path / 'song.sm'), True)]
@@ -140,7 +142,7 @@ def test_the_corpus_is_walked_and_written(tmp_path: Path, mocker: MockerFixture)
 
 @pytest.mark.usefixtures('separated')
 def test_an_entry_already_written_is_not_rebuilt(tmp_path: Path, mocker: MockerFixture) -> None:
-    mocker.patch('smlab.stem_cache.load_separator', return_value=_Model())
+    mocker.patch('smlab.stems.cache.load_separator', return_value=_Model())
     root = tmp_path / 'cache'
     record = _record(tmp_path)
     list(build_stem_cache([record], root, device=_CPU))
@@ -153,8 +155,8 @@ def test_an_entry_already_written_is_not_rebuilt(tmp_path: Path, mocker: MockerF
 def test_a_song_that_yields_nothing_is_reported_as_unwritten(
     tmp_path: Path, mocker: MockerFixture
 ) -> None:
-    mocker.patch('smlab.stem_cache.load_separator', return_value=_Model())
-    mocker.patch('smlab.stem_cache.separate', side_effect=SeparationError('no'))
+    mocker.patch('smlab.stems.cache.load_separator', return_value=_Model())
+    mocker.patch('smlab.stems.cache.separate', side_effect=SeparationError('no'))
     record = _record(tmp_path)
     assert list(build_stem_cache([record], tmp_path / 'cache', device=_CPU)) == [
         (record['simfile'], False)
@@ -163,7 +165,7 @@ def test_a_song_that_yields_nothing_is_reported_as_unwritten(
 
 @pytest.mark.usefixtures('separated')
 def test_a_device_is_chosen_when_none_is_given(tmp_path: Path, mocker: MockerFixture) -> None:
-    mocker.patch('smlab.stem_cache.load_separator', return_value=_Model())
+    mocker.patch('smlab.stems.cache.load_separator', return_value=_Model())
     mocker.patch('torch.cuda.is_available', return_value=False)
     assert list(build_stem_cache([_record(tmp_path)], tmp_path / 'cache'))
 
@@ -174,5 +176,5 @@ def test_a_simfile_without_timing_yields_no_entry(tmp_path: Path, mocker: Mocker
     # guard against one has to be reached directly.
     record = _record(tmp_path)
     parsed = load_simfile(Path(record['simfile']))
-    mocker.patch('smlab.stem_cache.load_simfile', return_value=replace(parsed, timing=None))
+    mocker.patch('smlab.stems.cache.load_simfile', return_value=replace(parsed, timing=None))
     assert stem_cache_entry(record, _Model(), _CPU) is None

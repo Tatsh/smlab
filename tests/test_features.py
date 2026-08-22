@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import numpy as np
+import pytest
+
 from smlab.features import (
     FINE_SUBDIVISIONS,
     MIXTURE_MELS,
@@ -15,8 +18,6 @@ from smlab.features import (
 )
 from smlab.stems import STEM_NAMES
 from smlab.timing import TimingData
-import numpy as np
-import pytest
 
 _RATE = 22050
 _BPM = 120.0

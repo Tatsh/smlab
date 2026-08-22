@@ -21,9 +21,8 @@ import librosa
 import numpy as np
 import torch
 
-from .audio import DEFAULT_SAMPLE_RATE
-from .chart_data import WINDOW_STEPS
-from .constraints import (
+from smlab.audio import DEFAULT_SAMPLE_RATE
+from smlab.constraints import (
     HOLD_CODES,
     HOLD_SLOTS,
     TAIL_CODE,
@@ -33,22 +32,24 @@ from .constraints import (
     panel_membership,
     permitted,
 )
-from .dataset import SUBDIVISIONS_PER_BEAT, difficulty_index
-from .encoder import MAX_METER, MAX_RATE, MEASURE_SLOTS, STYLES
-from .features import fine_features, mixture_loudness
-from .heads import MAX_DELTA, ChartModel, SelectionBatch
-from .slots import choose_slots
-from .stems import separate
+from smlab.dataset import SUBDIVISIONS_PER_BEAT, difficulty_index
+from smlab.encoder import MAX_METER, MAX_RATE, MEASURE_SLOTS, STYLES
+from smlab.features import fine_features, mixture_loudness
+from smlab.heads import MAX_DELTA, ChartModel, SelectionBatch
+from smlab.slots import choose_slots
+from smlab.stems import separate
+
+from .data import WINDOW_STEPS
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from numpy.typing import NDArray
 
-    from .generate import GenerationConfig
-    from .stems import Separator
-    from .timing import TimingData
-    from .vocab import Vocabulary
+    from smlab.generate import GenerationConfig
+    from smlab.stems import Separator
+    from smlab.timing import TimingData
+    from smlab.vocab import Vocabulary
 
 __all__ = ('encode_song', 'generate_rows', 'song_features')
 

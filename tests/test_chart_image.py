@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
     from pytest_mock import MockerFixture
 
-from smlab.chart_image import MEASURES_PER_COLUMN, Heading, render_chart, write_chart
+from smlab.chart.image import MEASURES_PER_COLUMN, Heading, render_chart, write_chart
 
 _MEASURE = 48
 _HEADING = Heading('Song', 'Hard', 9, 120.0)

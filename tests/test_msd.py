@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from smlab.msd import parse_beat_value_list, parse_float, parse_msd, read_simfile_text
 import pytest
+
+from smlab.msd import parse_beat_value_list, parse_float, parse_msd, read_simfile_text
 
 if TYPE_CHECKING:
     from pathlib import Path

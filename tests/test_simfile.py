@@ -4,15 +4,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
 from smlab.chart import normalize_difficulty
 from smlab.simfile import SimfileError, load_simfile
 from tests.conftest import SM_TEXT
-import pytest
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from pytest_mock import MockerFixture
+
     from smlab.chart import Chart
 
 

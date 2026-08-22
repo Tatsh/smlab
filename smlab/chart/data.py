@@ -27,19 +27,19 @@ from torch.utils.data import Dataset
 import numpy as np
 import torch
 
-from .cache import cache_path_for
-from .dataset import SUBDIVISIONS_PER_BEAT, difficulty_index
-from .encoder import MAX_METER, MAX_RATE, MEASURE_SLOTS, STYLES
-from .features import TOTAL_CHANNELS
-from .heads import MAX_DELTA, metric_prior_logits
+from smlab.cache import cache_path_for
+from smlab.dataset import SUBDIVISIONS_PER_BEAT, difficulty_index
+from smlab.encoder import MAX_METER, MAX_RATE, MEASURE_SLOTS, STYLES
+from smlab.features import TOTAL_CHANNELS
+from smlab.heads import MAX_DELTA, metric_prior_logits
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from numpy.typing import NDArray
 
-    from .typing import SongRecord
-    from .vocab import Vocabulary
+    from smlab.typing import SongRecord
+    from smlab.vocab import Vocabulary
 
 __all__ = (
     'MIRRORS',

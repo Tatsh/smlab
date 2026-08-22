@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 import sys
 
+import pytest
+
 from smlab.weights import (
     CHART_WEIGHTS,
     DEFAULT_REPOSITORY,
@@ -15,7 +17,6 @@ from smlab.weights import (
     weights_repository,
     weights_revision,
 )
-import pytest
 
 if TYPE_CHECKING:
     from pathlib import Path

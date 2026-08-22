@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from smlab.encoder import MEASURE_SLOTS, STYLES, AudioEncoder, EncoderConfig
-from smlab.features import TOTAL_CHANNELS
 import pytest
 import torch
+
+from smlab.encoder import MEASURE_SLOTS, STYLES, AudioEncoder, EncoderConfig
+from smlab.features import TOTAL_CHANNELS
 
 _SMALL = EncoderConfig(
     channels=32, model_dimension=24, local_blocks=1, slot_layers=1, measure_layers=1, heads=2

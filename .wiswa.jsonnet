@@ -54,6 +54,20 @@ local utils = import 'utils.libsonnet';
         report+: { omit+: ['%s/typing.py' % top.primary_module] },
         run+: { omit+: ['%s/typing.py' % top.primary_module] },
       },
+      ruff+: {
+        lint+: {
+          isort+: {
+            'known-first-party': [top.primary_module],
+            'section-order': [
+              'future',
+              'standard-library',
+              'third-party',
+              'first-party',
+              'local-folder',
+            ],
+          },
+        },
+      },
       uv+: {
         'cache-dir': uv_cache_dir,
         // Intel macOS is left out: demucs pins numpy below 2 there, which this

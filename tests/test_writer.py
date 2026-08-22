@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 import hashlib
 import re
 
+import pytest
+
 from smlab.dataset import SUBDIVISIONS_PER_BEAT
 from smlab.simfile import load_simfile
 from smlab.timing import TimingData
@@ -23,7 +25,6 @@ from smlab.writer import (
     step_stream,
     write_song,
 )
-import pytest
 
 _TIMING = TimingData.constant(150.0, -0.048)
 

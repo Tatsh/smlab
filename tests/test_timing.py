@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from smlab.timing import BpmSegment, StopSegment, TimingData, gap_ms_to_offset, offset_to_gap_ms
 import pytest
+
+from smlab.timing import BpmSegment, StopSegment, TimingData, gap_ms_to_offset, offset_to_gap_ms
 
 
 @pytest.mark.parametrize('offset', [-0.048, 0.0, 0.5, -16.011, 3.974])

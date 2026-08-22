@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from smlab.generate import (
     CLASSIC_SCALE,
     DEFAULT_SCALE,
@@ -13,7 +15,6 @@ from smlab.generate import (
     GenerationConfig,
     target_nps,
 )
-import pytest
 
 
 @pytest.mark.parametrize(

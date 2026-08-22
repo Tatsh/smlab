@@ -22,17 +22,17 @@ from torch.utils.data import DataLoader, WeightedRandomSampler
 import numpy as np
 import torch
 
-from .chart_data import ChartExample, ChartWindows, measure_prior
-from .encoder import EncoderConfig
-from .heads import ChartModel, SelectionBatch
+from smlab.chart.data import ChartExample, ChartWindows, measure_prior
+from smlab.encoder import EncoderConfig
+from smlab.heads import ChartModel, SelectionBatch
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from numpy.typing import NDArray
 
-    from .typing import SongRecord
-    from .vocab import Vocabulary
+    from smlab.typing import SongRecord
+    from smlab.vocab import Vocabulary
 
 __all__ = ('ChartTrainingConfig', 'stratified_auc', 'style_sampler', 'train_chart_model')
 

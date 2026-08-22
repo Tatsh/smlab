@@ -6,14 +6,16 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from smlab.cache import cache_path_for, iter_cached, load_cached, write_song_cache
-from smlab.simfile import load_simfile
 import numpy as np
 import pytest
 import soundfile as sf  # type: ignore[import-untyped]  # No stubs are published.
 
+from smlab.cache import cache_path_for, iter_cached, load_cached, write_song_cache
+from smlab.simfile import load_simfile
+
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
+
     from smlab.typing import SongRecord
 
 _RATE = 22050

@@ -17,8 +17,8 @@ import torch
 
 from .audio import audio_duration, load_audio
 from .chart import DIFFICULTIES
-from .chart_gen import generate_rows, song_features
-from .chart_image import Heading, write_chart
+from .chart.gen import generate_rows, song_features
+from .chart.image import Heading, write_chart
 from .corpus import EXCLUDED_PACKS, scan_corpus, write_manifest
 from .dataset import CODE_BY_CHAR, SUBDIVISIONS_PER_BEAT, beat_features
 from .encoder import EncoderConfig
@@ -38,15 +38,16 @@ from .playability import Style, analyze_rows
 from .preview import DEFAULT_SAMPLE_LENGTH, PreviewModel, predict_sample_start
 from .resources import PREVIEW_ASSET, load_state_dict, load_vocabulary
 from .simfile import load_simfile
-from .stem_cache import build_stem_cache
 from .stems import SeparationError, load_separator
+from .stems.cache import build_stem_cache
 from .tags import apply_tags
 from .tempo import estimate_timing
 from .timing import TimingData
-from .train_charts import ChartTrainingConfig, train_chart_model
-from .train_offset import (
+from .train import (
+    ChartTrainingConfig,
     OffsetTrainingConfig,
     build_envelope_cache,
+    train_chart_model,
     train_offset_model,
 )
 from .vocab import Vocabulary, build_vocabulary

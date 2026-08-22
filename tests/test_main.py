@@ -6,6 +6,11 @@ from dataclasses import replace
 from typing import TYPE_CHECKING
 import json
 
+import numpy as np
+import pytest
+import soundfile as sf  # type: ignore[import-untyped]  # No stubs are published.
+import torch
+
 from smlab.encoder import MEASURE_SLOTS, EncoderConfig
 from smlab.features import TOTAL_CHANNELS
 from smlab.generate import DEFAULT_SCALE, SCALES, target_nps
@@ -24,10 +29,6 @@ from smlab.stems import STEM_NAMES, SeparationError
 from smlab.timing import TimingData
 from smlab.vocab import Vocabulary, encode_row
 from smlab.weights import CHART_WEIGHTS, OFFSET_WEIGHTS, REPOSITORY_VARIABLE
-import numpy as np
-import pytest
-import soundfile as sf  # type: ignore[import-untyped]  # No stubs are published.
-import torch
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -97,7 +98,7 @@ def generation(mocker: MockerFixture) -> None:
     mocker.patch('smlab.main.load_vocabulary', return_value=_VOCABULARY)
     mocker.patch('smlab.main._load_offset_model', return_value=None)
     mocker.patch(
-        'smlab.chart_gen.separate',
+        'smlab.chart.gen.separate',
         side_effect=lambda _m, path, _d: dict.fromkeys(
             STEM_NAMES, np.asarray(sf.read(path)[0], dtype=np.float32)
         ),
@@ -630,7 +631,7 @@ def test_a_trained_offset_model_places_the_downbeat(
     mocker.patch('smlab.main.resolve_weights', return_value=tmp_path / 'offset.pt')
     mocker.patch('torch.load', return_value={'model': _offset_model().state_dict()})
     mocker.patch(
-        'smlab.chart_gen.separate',
+        'smlab.chart.gen.separate',
         side_effect=lambda _m, path, _d: dict.fromkeys(
             STEM_NAMES, np.asarray(sf.read(path)[0], dtype=np.float32)
         ),
@@ -676,7 +677,7 @@ def test_weights_that_will_not_load_leave_the_offset_alone(
     mocker.patch('smlab.main.load_vocabulary', return_value=_VOCABULARY)
     mocker.patch('smlab.main.resolve_weights', side_effect=OSError)
     mocker.patch(
-        'smlab.chart_gen.separate',
+        'smlab.chart.gen.separate',
         side_effect=lambda _m, path, _d: dict.fromkeys(
             STEM_NAMES, np.asarray(sf.read(path)[0], dtype=np.float32)
         ),

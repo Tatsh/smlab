@@ -4,8 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
+import pytest
+import soundfile as sf  # type: ignore[import-untyped]  # No stubs are published.
+import torch
+
 from smlab.offset import BEATS_PER_MEASURE, PHASE_BINS, phase_of_offset
-from smlab.train_offset import (
+from smlab.train.offset import (
     FoldedProfiles,
     OffsetTrainingConfig,
     build_envelope_cache,
@@ -13,10 +18,6 @@ from smlab.train_offset import (
     train_offset_model,
     usable,
 )
-import numpy as np
-import pytest
-import soundfile as sf  # type: ignore[import-untyped]  # No stubs are published.
-import torch
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -202,7 +203,7 @@ def test_progress_is_reported_for_a_long_run(tmp_path: Path, mocker: MockerFixtu
     # Separating a corpus takes hours, so the run has to say where it is.
     audio = tmp_path / 'song.wav'
     sf.write(audio, np.zeros(22050 * 35, dtype='float32'), 22050)
-    mocker.patch('smlab.train_offset._PROGRESS_EVERY', 1)
+    mocker.patch('smlab.train.offset._PROGRESS_EVERY', 1)
     assert (
         build_envelope_cache([_record(audio=str(audio), offset=-0.048)] * 3, tmp_path / 'out') == 3
     )

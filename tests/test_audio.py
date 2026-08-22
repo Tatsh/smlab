@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
+import pytest
+import soundfile as sf  # type: ignore[import-untyped]  # No stubs are published.
+
 from smlab.audio import (
     DEFAULT_HOP_LENGTH,
     DEFAULT_SAMPLE_RATE,
@@ -13,9 +17,6 @@ from smlab.audio import (
     load_audio,
     onset_envelope,
 )
-import numpy as np
-import pytest
-import soundfile as sf  # type: ignore[import-untyped]  # No stubs are published.
 
 if TYPE_CHECKING:
     from pathlib import Path

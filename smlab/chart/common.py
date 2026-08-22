@@ -5,13 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, NamedTuple
 
-from .timing import BEATS_PER_MEASURE
+from smlab.timing import BEATS_PER_MEASURE
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
     from pathlib import Path
 
-    from .timing import TimingData
+    from smlab.timing import TimingData
 
 __all__ = (
     'ACTIVE_CHARS',

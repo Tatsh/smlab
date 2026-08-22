@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
+import pytest
+import soundfile as sf  # type: ignore[import-untyped]  # No stubs are published.
+import torch
+
 from smlab.offset import (
     BEATS_PER_MEASURE,
     PHASE_BINS,
@@ -15,10 +20,6 @@ from smlab.offset import (
     predict_phase,
     refine_offset,
 )
-import numpy as np
-import pytest
-import soundfile as sf  # type: ignore[import-untyped]  # No stubs are published.
-import torch
 
 if TYPE_CHECKING:
     from pathlib import Path

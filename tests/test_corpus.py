@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 import json
 import pathlib
 
+import pytest
+
 from smlab.corpus import (
     EXCLUDED_PACKS,
     KEYBOARD_PACKS,
@@ -16,7 +18,6 @@ from smlab.corpus import (
     summarize_song,
     write_manifest,
 )
-import pytest
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

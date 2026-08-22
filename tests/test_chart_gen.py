@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from smlab.chart_gen import encode_song, generate_rows, song_features
+import numpy as np
+import pytest
+import soundfile as sf  # type: ignore[import-untyped]  # No stubs are published.
+import torch
+
+from smlab.chart.gen import encode_song, generate_rows, song_features
 from smlab.dataset import SUBDIVISIONS_PER_BEAT
 from smlab.encoder import MEASURE_SLOTS, EncoderConfig
 from smlab.features import FINE_SUBDIVISIONS, TOTAL_CHANNELS
@@ -13,10 +18,6 @@ from smlab.heads import ChartModel
 from smlab.stems import STEM_NAMES
 from smlab.timing import TimingData
 from smlab.vocab import Vocabulary, encode_row
-import numpy as np
-import pytest
-import soundfile as sf  # type: ignore[import-untyped]  # No stubs are published.
-import torch
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -82,7 +83,7 @@ def test_a_song_is_separated_onto_the_fine_grid(tmp_path: Path, mocker: MockerFi
     audio = tmp_path / 'song.wav'
     sf.write(audio, np.zeros(_RATE * 4, dtype='float32'), _RATE)
     mocker.patch(
-        'smlab.chart_gen.separate',
+        'smlab.chart.gen.separate',
         return_value=dict.fromkeys(STEM_NAMES, np.zeros(_RATE * 4, dtype=np.float32)),
     )
     features = song_features(_Separator(), audio, _TIMING, _CPU)

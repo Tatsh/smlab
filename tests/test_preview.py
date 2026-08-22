@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import numpy as np
+import pytest
+import torch
+
 from smlab.dataset import FEATURE_DIMENSION
 from smlab.preview import (
     DEFAULT_SAMPLE_LENGTH,
@@ -14,9 +18,6 @@ from smlab.preview import (
     predict_sample_start,
 )
 from smlab.timing import BEATS_PER_MEASURE, TimingData
-import numpy as np
-import pytest
-import torch
 
 
 def _features(measures: int) -> np.ndarray:

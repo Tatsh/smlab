@@ -5,9 +5,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 import json
 
-from smlab.vocab import Vocabulary, build_vocabulary, coverage, decode_row, encode_row
 import numpy as np
 import pytest
+
+from smlab.vocab import Vocabulary, build_vocabulary, coverage, decode_row, encode_row
 
 if TYPE_CHECKING:
     from pathlib import Path
