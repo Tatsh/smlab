@@ -10,8 +10,6 @@
 .cspellcache
 .directory
 .pnp.*
-.sbclaude-venv/
-.venv/
 /.bash_profile
 /.bashrc
 /.claude/auto-continue.md
@@ -33,7 +31,9 @@
 /.mcp.json
 /.profile
 /.ripgreprc
+/.sbclaude-venv/
 /.uv-cache/
+/.venv/
 /.wiswa-ci/
 /.yarn/install-state.gz
 /.zprofile

@@ -44,15 +44,15 @@ local utils = import 'utils.libsonnet';
         'torch>=2.11.0',
       ],
       'optional-dependencies'+: {
-        // Demucs pins numpy below 2 on Intel macOS, which this project cannot
-        // satisfy, so separation is unavailable there.
+        // Demucs pins numpy below 2 on Intel macOS.
         stems: ["demucs>=4.1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"],
       },
     },
     tool+: {
       coverage+: {
-        report+: { omit+: ['%s/typing.py' % top.primary_module] },
-        run+: { omit+: ['%s/typing.py' % top.primary_module] },
+        local omit = ['%s/typing.py' % top.primary_module],
+        report+: { omit+: omit },
+        run+: { omit+: omit },
       },
       ruff+: {
         lint+: {
@@ -70,8 +70,7 @@ local utils = import 'utils.libsonnet';
       },
       uv+: {
         'cache-dir': uv_cache_dir,
-        // Intel macOS is left out: demucs pins numpy below 2 there, which this
-        // project cannot satisfy.
+        // Intel macOS is left out: demucs pins numpy below 2 there.
         environments: [
           "sys_platform == 'linux'",
           "sys_platform == 'darwin' and platform_machine == 'arm64'",
