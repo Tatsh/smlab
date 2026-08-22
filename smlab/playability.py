@@ -20,7 +20,6 @@ demands, and they are measured separately here:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from itertools import starmap
 from typing import TYPE_CHECKING, Literal
 import math
 
@@ -137,8 +136,6 @@ class PlayabilityReport:
     """Highest note rate over :data:`BURST_WINDOW_SECONDS`."""
     chord_rows: int
     """Rows needing three or four panels, which require hands."""
-    crossovers: int
-    """Rows that can only be danced in a crossed-over position."""
     fastest_jack: float
     """Shortest interval between repeats of one panel, in seconds."""
     geometrically_possible: bool
@@ -251,9 +248,9 @@ def _transition_cost(previous: tuple[int, int], current: tuple[int, int], gap: f
     return cost
 
 
-def _foot_search(occupied: Sequence[tuple[float, set[int]]]) -> tuple[bool, int]:
+def _foot_search(occupied: Sequence[tuple[float, set[int]]]) -> bool:
     """
-    Decide whether two feet can cover every row, and count crossovers.
+    Decide whether two feet can cover every row.
 
     Feet must cover as many of a row's panels as they can reach, which is two
     for a chord and all of them otherwise; anything left over is attributed to
@@ -270,7 +267,6 @@ def _foot_search(occupied: Sequence[tuple[float, set[int]]]) -> tuple[bool, int]
         Whether a valid assignment exists, and how many rows force a crossover.
     """
     costs = dict.fromkeys(FOOT_STATES, 0.0)
-    crossovers = 0
     previous_time = occupied[0][0] if occupied else 0.0
     for time, panels in occupied:
         needed = min(len(panels), MAX_FEET)
@@ -286,12 +282,10 @@ def _foot_search(occupied: Sequence[tuple[float, set[int]]]) -> tuple[bool, int]
             if best < _IMPOSSIBLE:
                 updated[state] = best
         if not updated:
-            return False, crossovers
-        if all(starmap(is_crossover, updated)):
-            crossovers += 1
+            return False
         costs = updated
         previous_time = time
-    return True, crossovers
+    return True
 
 
 def _classify(report: dict[str, float | int | bool]) -> tuple[Style, tuple[str, ...]]:
@@ -349,7 +343,6 @@ def analyze_rows(rows: Sequence[tuple[float, Sequence[int]]]) -> PlayabilityRepo
         return PlayabilityReport(
             burst_nps=0.0,
             chord_rows=0,
-            crossovers=0,
             fastest_jack=math.inf,
             geometrically_possible=True,
             impossible_rows=0,
@@ -376,7 +369,7 @@ def analyze_rows(rows: Sequence[tuple[float, Sequence[int]]]) -> PlayabilityRepo
             if (previous := last_seen.get(panel)) is not None:
                 fastest_jack = min(fastest_jack, time - previous)
             last_seen[panel] = time
-    possible, crossovers = _foot_search(occupied)
+    possible = _foot_search(occupied)
     measurements: dict[str, float | int | bool] = {
         'burst_nps': _window_rate(times, BURST_WINDOW_SECONDS),
         'chord_rows': chord_rows,
@@ -389,7 +382,6 @@ def analyze_rows(rows: Sequence[tuple[float, Sequence[int]]]) -> PlayabilityRepo
     return PlayabilityReport(
         burst_nps=float(measurements['burst_nps']),
         chord_rows=chord_rows,
-        crossovers=crossovers,
         fastest_jack=fastest_jack,
         geometrically_possible=possible,
         impossible_rows=impossible_rows,

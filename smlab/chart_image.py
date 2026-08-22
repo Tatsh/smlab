@@ -410,11 +410,6 @@ def _svg_shape(shape: Shape) -> str:
     -------
     str
         One SVG element.
-
-    Raises
-    ------
-    TypeError
-        If the shape is of a kind this writer does not know.
     """
     match shape:
         case Rect():
@@ -441,7 +436,7 @@ def _svg_shape(shape: Shape) -> str:
                 f'<circle cx="{shape.x:.1f}" cy="{shape.y:.1f}" r="{shape.radius}" '
                 f'fill="none" stroke="{shape.colour}" stroke-width="2.5" stroke-dasharray="3 2"/>'
             )
-        case Text():
+        case _:
             anchor = f' text-anchor="{shape.anchor}"' if shape.anchor != 'start' else ''
             family = 'monospace' if shape.anchor == 'end' else 'sans-serif'
             return (
@@ -449,7 +444,6 @@ def _svg_shape(shape: Shape) -> str:
                 f'fill="{shape.colour}"{anchor} font-family="{family}">'
                 f'{escape(shape.content)}</text>'
             )
-    raise TypeError(shape)
 
 
 def write_chart(
@@ -532,7 +526,7 @@ def _write_png(destination: Path, page: Page) -> None:
                     outline=shape.colour,
                     width=2,
                 )
-            case Text():
+            case _:
                 draw.text(
                     (shape.x, shape.y),
                     shape.content,

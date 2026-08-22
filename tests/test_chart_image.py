@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 import xml.etree.ElementTree as ET  # noqa: S405
 
-from PIL import Image
+from PIL import Image, ImageFont
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from pytest_mock import MockerFixture
 
 from smlab.chart_image import MEASURES_PER_COLUMN, Heading, render_chart, write_chart
 
@@ -18,6 +20,10 @@ _HEADING = Heading('Song', 'Hard', 9, 120.0)
 
 def _parse(document: str) -> ET.Element:
     return ET.fromstring(document)  # noqa: S314
+
+
+def _arrow_colour(root: ET.Element) -> str | None:
+    return next(node.get('fill') for node in root.iter() if node.tag.endswith('polygon'))
 
 
 def _bodies(document: str) -> list[float]:
@@ -120,3 +126,49 @@ def test_an_svg_is_written_when_the_suffix_says_so(tmp_path: Path) -> None:
     destination = tmp_path / 'chart.svg'
     write_chart(destination, [(0, [1, 0, 0, 0])], _HEADING)
     assert destination.read_text().startswith('<svg')
+
+
+def test_a_mine_is_drawn_as_a_ring() -> None:
+    # A mine is not stepped on, so it must not read as an arrow.
+    root = _parse(render_chart([(0, [5, 0, 0, 0])], _HEADING))
+    assert [node for node in root.iter() if node.tag.endswith('circle')]
+    assert not [node for node in root.iter() if node.tag.endswith('polygon')]
+
+
+def test_a_roll_head_is_drawn_apart_from_a_tap() -> None:
+    tap = _parse(render_chart([(0, [1, 0, 0, 0])], _HEADING))
+    roll = _parse(render_chart([(0, [4, 0, 0, 0])], _HEADING))
+    assert _arrow_colour(tap) != _arrow_colour(roll)
+
+
+def test_measure_numbers_are_written_down_the_side() -> None:
+    root = _parse(render_chart([(0, [1, 0, 0, 0])], _HEADING))
+    texts = [node.text for node in root.iter() if node.tag.endswith('text')]
+    assert '1' in texts
+
+
+def test_a_png_falls_back_to_a_built_in_font(tmp_path: Path, mocker: MockerFixture) -> None:
+    # A container with no system fonts still has to draw the measure numbers.
+    # Pillow's own default font is loaded through truetype as well, so only a
+    # lookup by path may fail.
+    real = ImageFont.truetype
+
+    def missing(font: Any, size: int = 10, **kwargs: Any) -> ImageFont.FreeTypeFont:
+        if isinstance(font, str):
+            raise OSError
+        return real(font, size, **kwargs)
+
+    mocker.patch('PIL.ImageFont.truetype', missing)
+    destination = tmp_path / 'chart.png'
+    write_chart(destination, [(0, [1, 0, 0, 0]), (6, [0, 0, 0, 5])], _HEADING)
+    with Image.open(destination) as image:
+        assert image.size[0] > 0
+
+
+def test_every_shape_kind_survives_the_raster_back_end(tmp_path: Path) -> None:
+    # The two back ends draw the same list of shapes, so a kind the raster one
+    # cannot handle would only show up here.
+    destination = tmp_path / 'chart.png'
+    rows = [(0, [2, 0, 0, 0]), (12, [3, 0, 0, 5]), (24, [4, 1, 0, 0])]
+    write_chart(destination, rows, _HEADING)
+    assert destination.stat().st_size > 0

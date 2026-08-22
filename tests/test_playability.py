@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from smlab.playability import analyze_rows, is_crossover
+from smlab.playability import FOOT_STATES, MAX_FEET, analyze_rows, is_crossover
 import pytest
 
 TAP = 1
@@ -101,3 +101,37 @@ def test_note_rate_scales_with_tempo() -> None:
     assert fast.sustained_nps > slow.sustained_nps
     assert slow.style == 'feet'
     assert fast.style == 'keyboard'
+
+
+def test_a_chart_no_two_feet_can_cover_is_keyboard_only() -> None:
+    # Both feet would have to jump across the pad every millisecond.
+    rows = [(index * 0.001, codes) for index, codes in enumerate([[1, 1, 0, 0], [0, 0, 1, 1]] * 6)]
+    report = analyze_rows(rows)
+    assert not report.geometrically_possible
+    assert report.style == 'keyboard'
+    assert 'no two-foot assignment covers the chart' in report.reasons
+
+
+def test_a_panel_repeating_faster_than_a_foot_moves_is_reported() -> None:
+    rows = [(index * 0.05, [1, 0, 0, 0]) for index in range(12)]
+    report = analyze_rows(rows)
+    assert report.fastest_jack == pytest.approx(0.05)
+    assert any('a panel repeats every 50 ms' in reason for reason in report.reasons)
+
+
+def test_every_row_a_crossed_stance_covers_a_clean_one_covers_too() -> None:
+    # This is why the search never has to report a forced crossover: the foot
+    # states are symmetric under swapping, so a clean stance is reachable
+    # wherever a crossed one is.
+    for panels in ({0}, {1}, {2}, {3}, {0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3}):
+        needed = min(len(panels), MAX_FEET)
+        matching = [state for state in FOOT_STATES if len(panels & set(state)) == needed]
+        assert any(not is_crossover(*state) for state in matching)
+
+
+def test_a_row_needing_more_than_four_panels_is_reported() -> None:
+    # Wider steps types reach this: no player has five limbs.
+    report = analyze_rows([(0.0, [1, 1, 1, 1, 1, 1]), (1.0, [1, 0, 0, 0, 0, 0])])
+    assert report.impossible_rows == 1
+    assert 'rows need more than four panels at once' in report.reasons[0]
+    assert report.style == 'keyboard'

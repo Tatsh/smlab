@@ -128,19 +128,19 @@ def measure_text(rows: Mapping[int, Sequence[int]]) -> str:
     str
         Note lines separated by newlines.
     """
-    for count in _SUBDIVISIONS:
-        stride = SLOTS_PER_MEASURE // count
-        if all(slot % stride == 0 for slot in rows):
-            lines = []
-            for index in range(count):
-                codes = rows.get(index * stride)
-                lines.append(''.join(CHAR_BY_CODE[code] for code in codes) if codes else '0000')
-            return '\n'.join(lines)
-    # Unreachable for grid-aligned input, but fall back to full resolution.
-    return '\n'.join(
-        ''.join(CHAR_BY_CODE[code] for code in rows[slot]) if slot in rows else '0000'
-        for slot in range(SLOTS_PER_MEASURE)
+    # The last candidate is one line per slot, whose stride of one divides
+    # every position, so the search always settles on something.
+    count = next(
+        candidate
+        for candidate in _SUBDIVISIONS
+        if all(slot % (SLOTS_PER_MEASURE // candidate) == 0 for slot in rows)
     )
+    stride = SLOTS_PER_MEASURE // count
+    lines = []
+    for index in range(count):
+        codes = rows.get(index * stride)
+        lines.append(''.join(CHAR_BY_CODE[code] for code in codes) if codes else '0000')
+    return '\n'.join(lines)
 
 
 def _chart_text(rows: Iterable[tuple[int, Sequence[int]]]) -> str:

@@ -70,3 +70,61 @@ def test_shifting_moves_beat_zero_later() -> None:
 def test_empty_bpms_is_rejected() -> None:
     with pytest.raises(ValueError, match='at least one BPM segment'):
         TimingData(bpms=())
+
+
+def test_a_time_inside_a_stop_holds_the_beat_still() -> None:
+    # The chart waits at the stop's beat for its whole duration.
+    timing = TimingData((BpmSegment(0.0, 120.0),), stops=(StopSegment(4.0, 1.0),))
+    # Beat 4 arrives a second late because the stop sits in front of it, so
+    # the frozen window is the second before that moment.
+    assert timing.time_at_beat(4.0) == pytest.approx(3.0)
+    assert timing.beat_at_time(2.5) == pytest.approx(4.0)
+
+
+def test_a_tempo_declared_after_beat_zero_still_governs_from_it() -> None:
+    # StepMania treats the first tempo as governing from beat 0 whatever beat
+    # the tag names, so the two files describe the same song.
+    late = TimingData((BpmSegment(8.0, 120.0),))
+    early = TimingData((BpmSegment(0.0, 120.0),))
+    assert late.time_at_beat(4.0) == pytest.approx(early.time_at_beat(4.0))
+
+
+def test_the_tempo_at_a_beat_is_reported() -> None:
+    timing = TimingData((BpmSegment(0.0, 120.0), BpmSegment(4.0, 180.0)))
+    assert timing.bpm_at_beat(0.0) == pytest.approx(120.0)
+    assert timing.bpm_at_beat(6.0) == pytest.approx(180.0)
+
+
+def test_a_time_before_beat_zero_extrapolates_backwards() -> None:
+    # An intro shorter than the offset still needs a beat number.
+    timing = TimingData((BpmSegment(0.0, 120.0),), offset=-1.0)
+    assert timing.beat_at_time(0.0) == pytest.approx(-2.0)
+
+
+def test_the_tempo_range_spans_every_segment() -> None:
+    timing = TimingData((
+        BpmSegment(0.0, 120.0),
+        BpmSegment(4.0, 180.0),
+        BpmSegment(8.0, 90.0),
+    ))
+    low, high = timing.bpm_range()
+    assert low == pytest.approx(90.0)
+    assert high == pytest.approx(180.0)
+
+
+def test_the_primary_tempo_is_the_one_at_beat_zero() -> None:
+    timing = TimingData((BpmSegment(0.0, 120.0), BpmSegment(4.0, 180.0)))
+    assert timing.primary_bpm == pytest.approx(120.0)
+
+
+def test_a_stop_and_a_tempo_change_on_one_beat_are_both_applied() -> None:
+    # StepMania orders the tempo change first, so the pause is measured in
+    # seconds and the beats after it run at the new tempo.
+    timing = TimingData(
+        (BpmSegment(0.0, 120.0), BpmSegment(4.0, 240.0)),
+        stops=(StopSegment(4.0, 1.0),),
+    )
+    # Four beats at 120 BPM is two seconds, then a second of silence.
+    assert timing.time_at_beat(4.0) == pytest.approx(3.0)
+    # The four beats after it run at the doubled tempo.
+    assert timing.time_at_beat(8.0) == pytest.approx(4.0)

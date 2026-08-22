@@ -166,8 +166,9 @@ def _dwi_notes_to_sm(stream: str) -> str:
     rows = [['0'] * 4 for _ in range(total_rows)]
     holds_open: dict[int, bool] = {}
     for beat, panels, is_hold in events:
-        if (row := round(beat * _DWI_ROWS_PER_BEAT)) >= total_rows:
-            continue
+        # The measure count is derived from the last event, so every row lands
+        # inside it.
+        row = round(beat * _DWI_ROWS_PER_BEAT)
         for panel in panels:
             column = _DWI_COLUMN[panel]
             if holds_open.get(column):

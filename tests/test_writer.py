@@ -17,6 +17,9 @@ from smlab.writer import (
 )
 import pytest
 
+_TIMING = TimingData.constant(150.0, -0.048)
+
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -177,3 +180,20 @@ def test_holds_survive_a_round_trip(tmp_path: Path) -> None:
     (tmp_path / 'song.ogg').write_bytes(b'')
     columns = [row.columns for row in load_simfile(path).singles()[0].rows()]
     assert columns == ['2000', '3000']
+
+
+def test_a_chart_with_no_rows_writes_one_silent_measure() -> None:
+    text = render_simfile(SongMetadata(title='Empty'), _TIMING, [('Challenge', 9, [])])
+    assert '0000\n0000\n0000\n0000' in text
+
+
+def test_audio_already_in_place_is_not_copied_over_itself(tmp_path: Path) -> None:
+    # Generating into the folder the audio already lives in must not truncate
+    # the file by copying it onto itself.
+    directory = tmp_path / 'Song'
+    directory.mkdir()
+    audio = directory / 'Song.ogg'
+    audio.write_bytes(b'audio data')
+    written = write_song(SongMetadata(title='Song'), audio, _TIMING, [('Easy', 3, [])], tmp_path)
+    assert written.is_file()
+    assert audio.read_bytes() == b'audio data'
