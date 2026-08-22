@@ -929,7 +929,8 @@ def analyze(simfile: Path) -> None:
         click.echo(
             f'  {chart.difficulty:10} meter {chart.meter:2}  {len(rows):5} rows  '
             f'style={report.style:8} peak {report.burst_nps:5.1f} nps  '
-            f'sustained {report.sustained_nps:5.1f} nps  chords {report.chord_rows}'
+            f'sustained {report.sustained_nps:5.1f} nps  chords {report.chord_rows}  '
+            f'crossovers {report.crossovers}'
         )
         for reason in report.reasons:
             click.echo(f'      {reason}')

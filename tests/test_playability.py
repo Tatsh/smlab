@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
-from smlab.playability import FOOT_STATES, MAX_FEET, analyze_rows, is_crossover
+from smlab.playability import (
+    FOOT_STATES,
+    MAX_FEET,
+    STREAM_SECONDS,
+    analyze_rows,
+    is_crossover,
+)
 import pytest
 
 TAP = 1
@@ -119,10 +125,53 @@ def test_a_panel_repeating_faster_than_a_foot_moves_is_reported() -> None:
     assert any('a panel repeats every 50 ms' in reason for reason in report.reasons)
 
 
-def test_every_row_a_crossed_stance_covers_a_clean_one_covers_too() -> None:
-    # This is why the search never has to report a forced crossover: the foot
-    # states are symmetric under swapping, so a clean stance is reachable
-    # wherever a crossed one is.
+@pytest.mark.parametrize('panels', ['L R L R L R L R', 'R L R L R L R L', 'R L D L R L D L'])
+def test_an_alternation_the_feet_suit_crosses_nowhere(panels: str) -> None:
+    # Left and right alternating is the most natural thing a pad asks for.
+    assert analyze_rows(_run(panels)).crossovers == 0
+
+
+@pytest.mark.parametrize(('panels', 'crossed'), [('L U L U R U R U', 2), ('L D R D L D R D', 2)])
+def test_a_run_that_puts_a_foot_on_the_far_panel_counts_it(panels: str, crossed: int) -> None:
+    # Inside a run the feet alternate, so the panel sequence decides which
+    # steps land crossed. Four notes into LULU the alternation has the left
+    # foot due, and the next note is on the right panel.
+    assert analyze_rows(_run(panels)).crossovers == crossed
+
+
+def test_the_opening_note_sets_the_foot_rather_than_inheriting_one() -> None:
+    # It has no predecessor to alternate away from, and starting on the wrong
+    # foot would report the whole run as crossed.
+    assert analyze_rows(_run('R L R L R L R L')).crossovers == 0
+    assert analyze_rows(_run('L R L R L R L R')).crossovers == 0
+
+
+def test_notes_too_far_apart_to_be_a_run_reset_the_feet() -> None:
+    # With time to choose, a dancer takes each note on whichever foot suits,
+    # so nothing crosses however the panels fall.
+    spaced = [
+        (index * 1.0, _PANELS[name])
+        for index, name in enumerate(['L', 'U', 'L', 'U', 'R', 'U', 'R', 'U'])
+    ]
+    assert analyze_rows(spaced).crossovers == 0
+
+
+def test_a_jump_crosses_nothing_itself_but_still_moves_the_alternation() -> None:
+    # Both feet are committed, so the jump has no crossed foot of its own. It
+    # still takes a turn, which is what decides the note after it, and this is
+    # the model the generator budgets crossovers against.
+    gap = STREAM_SECONDS * 0.75
+    both = [1, 0, 0, 1]
+    after_right = [(0.0, _PANELS['L']), (gap, both), (2 * gap, _PANELS['R'])]
+    after_left = [(0.0, _PANELS['L']), (gap, both), (2 * gap, _PANELS['L'])]
+    assert analyze_rows(after_right).crossovers == 1
+    assert analyze_rows(after_left).crossovers == 0
+
+
+def test_a_clean_stance_is_reachable_wherever_a_crossed_one_is() -> None:
+    # This is why the feasibility search cannot answer the crossover question:
+    # the foot states are symmetric under swapping, and it prices crossing at
+    # four, so its cheapest assignment simply never crosses.
     for panels in ({0}, {1}, {2}, {3}, {0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3}):
         needed = min(len(panels), MAX_FEET)
         matching = [state for state in FOOT_STATES if len(panels & set(state)) == needed]
@@ -135,3 +184,12 @@ def test_a_row_needing_more_than_four_panels_is_reported() -> None:
     assert report.impossible_rows == 1
     assert 'rows need more than four panels at once' in report.reasons[0]
     assert report.style == 'keyboard'
+
+
+_PANELS = {'L': [1, 0, 0, 0], 'D': [0, 1, 0, 0], 'U': [0, 0, 1, 0], 'R': [0, 0, 0, 1]}
+
+
+def _run(panels: str) -> list[tuple[float, list[int]]]:
+    """Lay the named panels out close enough together to be danced as a run."""
+    gap = STREAM_SECONDS * 0.75
+    return [(index * gap, _PANELS[name]) for index, name in enumerate(panels.split())]

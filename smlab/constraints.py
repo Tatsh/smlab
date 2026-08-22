@@ -17,7 +17,7 @@ import numpy as np
 
 from .dataset import SUBDIVISIONS_PER_BEAT
 from .encoder import MEASURE_SLOTS
-from .playability import MAX_FEET, MAX_LIMBS
+from .playability import MAX_FEET, MAX_LIMBS, STREAM_SECONDS
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -72,7 +72,6 @@ _TWELFTH_STRIDE = 4
 _RELAX_CROSSOVERS = 1
 _RELAX_RATIONS = 2
 _RELAX_JUMPS = 3
-_STREAM_SECONDS = 0.16
 _MIN_FREEZE_SLOTS = 6
 """
 Gap a freeze needs before it may start, in grid slots.
@@ -567,7 +566,7 @@ class Budget:
         bool
             Whether the step is part of a run.
         """
-        if gap_seconds > _STREAM_SECONDS or style != 'feet':
+        if gap_seconds > STREAM_SECONDS or style != 'feet':
             return False
         self._streamed += 1
         self._foot ^= 1

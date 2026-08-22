@@ -34,6 +34,7 @@ __all__ = (
     'FOOT_STATES',
     'MAX_FEET',
     'PANEL_NAMES',
+    'STREAM_SECONDS',
     'SUSTAINED_WINDOW_SECONDS',
     'PlayabilityReport',
     'Style',
@@ -97,6 +98,15 @@ Shortest interval in which one foot can retap the same panel.
 
 :meta hide-value:
 """
+STREAM_SECONDS = 0.16
+"""
+Gap within which consecutive notes are danced as a run, in seconds.
+
+Closer together than this the feet alternate rather than choosing a panel
+each, which is what makes a step land crossed or not.
+
+:meta hide-value:
+"""
 _LEFT_PANEL = 0
 _RIGHT_PANEL = 3
 _STEP_CODES = frozenset(CODE_BY_CHAR[character] for character in (TAP, HOLD_HEAD, ROLL_HEAD, LIFT))
@@ -136,6 +146,8 @@ class PlayabilityReport:
     """Highest note rate over :data:`BURST_WINDOW_SECONDS`."""
     chord_rows: int
     """Rows needing three or four panels, which require hands."""
+    crossovers: int
+    """Steps a running dancer meets on a crossed foot."""
     fastest_jack: float
     """Shortest interval between repeats of one panel, in seconds."""
     geometrically_possible: bool
@@ -248,9 +260,54 @@ def _transition_cost(previous: tuple[int, int], current: tuple[int, int], gap: f
     return cost
 
 
+def _crossed_steps(rows: Sequence[tuple[float, Sequence[int]]]) -> int:
+    """
+    Count the steps a running dancer meets on a crossed foot.
+
+    Inside a run the feet alternate, so which panel a step lands on decides
+    whether the legs cross: it is the panel sequence that crosses, not any one
+    row. Between runs the feet reset to whichever suits the note, because there
+    is time to choose.
+
+    Asking the feasibility search instead would always answer none. It prices a
+    crossed stance at :py:data:`_CROSSOVER_COST`, so the cheapest assignment it
+    retains avoids crossing wherever it can, which across four hundred corpus
+    charts is everywhere.
+
+    Parameters
+    ----------
+    rows : :py:class:`~collections.abc.Sequence`
+        Time in seconds and panel codes for each row.
+
+    Returns
+    -------
+    int
+        Steps landing on a foot that has crossed over the other.
+    """
+    foot = 0
+    crossings = 0
+    previous_time: float | None = None
+    for time, codes in rows:
+        stepped = {panel for panel, code in enumerate(codes) if code in _STEP_CODES}
+        # The opening note has no predecessor to alternate away from, so it
+        # sets the foot rather than inheriting one.
+        in_run = previous_time is not None and time - previous_time <= STREAM_SECONDS
+        previous_time = time
+        if in_run:
+            foot ^= 1
+        if len(stepped) != 1:
+            continue
+        landed = next(iter(stepped))
+        if not in_run:
+            foot = 1 if landed == _RIGHT_PANEL else 0
+        elif (foot == 0 and landed == _RIGHT_PANEL) or (foot == 1 and landed == _LEFT_PANEL):
+            crossings += 1
+    return crossings
+
+
 def _foot_search(occupied: Sequence[tuple[float, set[int]]]) -> bool:
     """
-    Decide whether two feet can cover every row.
+    Decide whether two feet can cover every row, and count the crossovers.
 
     Feet must cover as many of a row's panels as they can reach, which is two
     for a chord and all of them otherwise; anything left over is attributed to
@@ -263,8 +320,8 @@ def _foot_search(occupied: Sequence[tuple[float, set[int]]]) -> bool:
 
     Returns
     -------
-    tuple[bool, int]
-        Whether a valid assignment exists, and how many rows force a crossover.
+    bool
+        Whether a valid assignment exists.
     """
     costs = dict.fromkeys(FOOT_STATES, 0.0)
     previous_time = occupied[0][0] if occupied else 0.0
@@ -343,6 +400,7 @@ def analyze_rows(rows: Sequence[tuple[float, Sequence[int]]]) -> PlayabilityRepo
         return PlayabilityReport(
             burst_nps=0.0,
             chord_rows=0,
+            crossovers=0,
             fastest_jack=math.inf,
             geometrically_possible=True,
             impossible_rows=0,
@@ -370,6 +428,7 @@ def analyze_rows(rows: Sequence[tuple[float, Sequence[int]]]) -> PlayabilityRepo
                 fastest_jack = min(fastest_jack, time - previous)
             last_seen[panel] = time
     possible = _foot_search(occupied)
+    crossovers = _crossed_steps(rows)
     measurements: dict[str, float | int | bool] = {
         'burst_nps': _window_rate(times, BURST_WINDOW_SECONDS),
         'chord_rows': chord_rows,
@@ -382,6 +441,7 @@ def analyze_rows(rows: Sequence[tuple[float, Sequence[int]]]) -> PlayabilityRepo
     return PlayabilityReport(
         burst_nps=float(measurements['burst_nps']),
         chord_rows=chord_rows,
+        crossovers=crossovers,
         fastest_jack=fastest_jack,
         geometrically_possible=possible,
         impossible_rows=impossible_rows,
