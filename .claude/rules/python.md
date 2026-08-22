@@ -30,6 +30,8 @@
   enforce iterable length with `itertools.islice()`.
 - Variables must use `snake_case` naming style.
 - Class names must use `CamelCase` naming style.
+- An acronym inside a class name keeps every letter capitalised: `PNGFile`, not `PngFile`;
+  `SSCWriter`, not `SscWriter`.
 - Constants must use `UPPER_SNAKE_CASE` naming style.
 - Function and method names must use `snake_case` naming style.
 - Use single quotes for strings except where it would be inconvenient to do so.

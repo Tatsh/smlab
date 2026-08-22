@@ -1,20 +1,18 @@
 """
 Deciding how a chart can physically be performed.
 
-A keyboard offers four independent fingers with negligible travel, so any
-combination of panels is reachable at any rate. A dance pad offers two feet and,
-at a stretch, two hands. Three separate limits therefore decide what a chart
-demands, and they are measured separately here:
+A keyboard offers four independent fingers with negligible travel, so any combination of panels is
+reachable at any rate. A dance pad offers two feet and, at a stretch, two hands. Three separate
+limits therefore decide what a chart demands, and they are measured separately here:
 
-* **Geometry.** Two feet cannot be in three places, and a foot pinned by a hold
-  cannot step elsewhere. Whether a valid assignment exists at all is decided by
-  a dynamic program over foot positions rather than by pattern heuristics.
-* **Chords.** Rows of three or four panels need hands as well as feet. That is
-  a normal part of In The Groove charting, so it is reported as its own
-  category rather than treated as a failure.
-* **Stamina.** A sustained note rate can exceed what anyone holds with their
-  legs while remaining comfortable under four fingers, so the note rate is
-  measured over both a short and a long window.
+* **Geometry.** Two feet cannot be in three places, and a foot pinned by a hold cannot step
+  elsewhere. Whether a valid assignment exists at all is decided by a dynamic program over foot
+  positions rather than by pattern heuristics.
+* **Chords.** Rows of three or four panels need hands as well as feet. That is a normal part of In
+  The Groove charting, so it is reported as its own category rather than treated as a failure.
+* **Stamina.** A sustained note rate can exceed what anyone holds with their legs while remaining
+  comfortable under four fingers, so the note rate is measured over both a short and a long
+  window.
 """
 
 from __future__ import annotations
@@ -87,8 +85,8 @@ MAX_SUSTAINED_NPS = 12.0
 """
 Note rate a dancer can hold for :data:`SUSTAINED_WINDOW_SECONDS`.
 
-Sixteenth notes at 180 beats per minute are twelve notes per second, which is
-already the territory of the hardest pad charts ever written.
+Sixteenth notes at 180 beats per minute are twelve notes per second, which is already the territory
+of the hardest pad charts ever written.
 
 :meta hide-value:
 """
@@ -102,8 +100,8 @@ STREAM_SECONDS = 0.16
 """
 Gap within which consecutive notes are danced as a run, in seconds.
 
-Closer together than this the feet alternate rather than choosing a panel
-each, which is what makes a step land crossed or not.
+Closer together than this the feet alternate rather than choosing a panel each, which is what makes
+a step land crossed or not.
 
 :meta hide-value:
 """
@@ -173,9 +171,9 @@ def _required_panels(rows: Sequence[tuple[float, Sequence[int]]]) -> list[tuple[
     """
     Return the panels that must be occupied at each row.
 
-    A panel under a hold stays occupied until its tail, so it counts against
-    the limb budget of every row in between. This is what makes an otherwise
-    ordinary note impossible: with two panels held, no foot remains free.
+    A panel under a hold stays occupied until its tail, so it counts against the limb budget of
+    every row in between. This is what makes an otherwise ordinary note impossible: with two panels
+    held, no foot remains free.
 
     Parameters
     ----------
@@ -245,8 +243,7 @@ def _transition_cost(previous: tuple[int, int], current: tuple[int, int], gap: f
     Returns
     -------
     float
-        Movement cost, or infinity when a foot would have to move impossibly
-        fast.
+        Movement cost, or infinity when a foot would have to move impossibly fast.
     """
     moved = (previous[0] != current[0]) + (previous[1] != current[1])
     if moved == MAX_FEET and gap < FAST_JACK_SECONDS:
@@ -264,15 +261,13 @@ def _crossed_steps(rows: Sequence[tuple[float, Sequence[int]]]) -> int:
     """
     Count the steps a running dancer meets on a crossed foot.
 
-    Inside a run the feet alternate, so which panel a step lands on decides
-    whether the legs cross: it is the panel sequence that crosses, not any one
-    row. Between runs the feet reset to whichever suits the note, because there
-    is time to choose.
+    Inside a run the feet alternate, so which panel a step lands on decides whether the legs cross:
+    it is the panel sequence that crosses, not any one row. Between runs the feet reset to whichever
+    suits the note, because there is time to choose.
 
-    Asking the feasibility search instead would always answer none. It prices a
-    crossed stance at :py:data:`_CROSSOVER_COST`, so the cheapest assignment it
-    retains avoids crossing wherever it can, which across four hundred corpus
-    charts is everywhere.
+    Asking the feasibility search instead would always answer none. It prices a crossed stance at
+    :py:data:`_CROSSOVER_COST`, so the cheapest assignment it retains avoids crossing wherever it
+    can, which across four hundred corpus charts is everywhere.
 
     Parameters
     ----------
@@ -290,11 +285,11 @@ def _crossed_steps(rows: Sequence[tuple[float, Sequence[int]]]) -> int:
     for time, codes in rows:
         stepped = {panel for panel, code in enumerate(codes) if code in _STEP_CODES}
         if not stepped:
-            # A row that only releases a freeze is not a step, so it neither
-            # takes a turn in the alternation nor breaks the run around it.
+            # A row that only releases a freeze is not a step, so it neither takes a turn in the
+            # alternation nor breaks the run around it.
             continue
-        # The opening note has no predecessor to alternate away from, so it
-        # sets the foot rather than inheriting one.
+        # The opening note has no predecessor to alternate away from, so it sets the foot rather
+        # than inheriting one.
         in_run = previous_time is not None and time - previous_time <= STREAM_SECONDS
         previous_time = time
         if in_run:
@@ -313,9 +308,8 @@ def _foot_search(occupied: Sequence[tuple[float, set[int]]]) -> bool:
     """
     Decide whether two feet can cover every row, and count the crossovers.
 
-    Feet must cover as many of a row's panels as they can reach, which is two
-    for a chord and all of them otherwise; anything left over is attributed to
-    hands.
+    Feet must cover as many of a row's panels as they can reach, which is two for a chord and all of
+    them otherwise; anything left over is attributed to hands.
 
     Parameters
     ----------
@@ -391,8 +385,7 @@ def analyze_rows(rows: Sequence[tuple[float, Sequence[int]]]) -> PlayabilityRepo
     Parameters
     ----------
     rows : :py:class:`~collections.abc.Sequence`
-        Time in seconds and four panel codes for each non-empty row, ordered by
-        time.
+        Time in seconds and four panel codes for each non-empty row, ordered by time.
 
     Returns
     -------
@@ -417,11 +410,10 @@ def analyze_rows(rows: Sequence[tuple[float, Sequence[int]]]) -> PlayabilityRepo
     max_simultaneous = max(len(panels) for _, panels in occupied)
     chord_rows = sum(1 for _, panels in occupied if MAX_FEET < len(panels) <= MAX_LIMBS)
     impossible_rows = sum(1 for _, panels in occupied if len(panels) > MAX_LIMBS)
-    # Only a fresh tap counts. A panel under a freeze is occupied on every row
-    # until its tail, which is what pins a foot there, but the foot is resting
-    # rather than retapping. Reading the jack rate off that set reports a
-    # repeat on every row a freeze spans, and a chart with a freeze under a
-    # sixteenth run then looks unplayable when it is nothing of the sort.
+    # Only a fresh tap counts. A panel under a freeze is occupied on every row until its tail,
+    # which is what pins a foot there, but the foot is resting rather than retapping. Reading the
+    # jack rate off that set reports a repeat on every row a freeze spans, and a chart with a
+    # freeze under a sixteenth run then looks unplayable when it is nothing of the sort.
     last_seen: dict[int, float] = {}
     fastest_jack = math.inf
     for time, codes in rows:

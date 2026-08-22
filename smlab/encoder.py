@@ -42,7 +42,7 @@ __all__ = (
     'STYLES',
     'AudioEncoder',
     'EncoderConfig',
-    'FilmConditioner',
+    'FiLMConditioner',
 )
 
 MEASURE_SLOTS = 48
@@ -113,7 +113,7 @@ class EncoderConfig:
     """Slots each position may attend to, centred on itself."""
 
 
-class FilmConditioner(nn.Module):
+class FiLMConditioner(nn.Module):
     """Produces a per-layer scale and shift from difficulty and rating."""
 
     def __init__(self, layers: int, width: int) -> None:
@@ -321,7 +321,7 @@ class AudioEncoder(nn.Module):
             for _ in range(settings.measure_layers)
         )
         total = settings.local_blocks + settings.slot_layers + settings.measure_layers
-        self.film = FilmConditioner(total, settings.model_dimension)
+        self.film = FiLMConditioner(total, settings.model_dimension)
         self.conv_film = nn.Linear(settings.model_dimension, settings.channels)
         self.output_norm = nn.LayerNorm(settings.model_dimension)
 

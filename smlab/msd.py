@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
     from pathlib import Path
 
-__all__ = ('MsdTag', 'parse_beat_value_list', 'parse_float', 'parse_msd', 'read_simfile_text')
+__all__ = ('MSDTag', 'parse_beat_value_list', 'parse_float', 'parse_msd', 'read_simfile_text')
 
 COMMENT_PATTERN = re.compile(r'//[^\r\n]*')
 """Matches an MSD line comment.
@@ -26,7 +26,7 @@ _ENCODINGS = ('utf-8', 'cp932')
 """Encodings tried in turn, before falling back to a lossy latin-1 read."""
 
 
-class MsdTag(NamedTuple):
+class MSDTag(NamedTuple):
     """One parsed ``#TAG:value;`` structure."""
 
     tag: str
@@ -61,7 +61,7 @@ def read_simfile_text(path: Path) -> str:
     return raw.decode('latin-1', errors='replace')
 
 
-def parse_msd(text: str) -> Iterator[MsdTag]:
+def parse_msd(text: str) -> Iterator[MSDTag]:
     """
     Yield each ``#TAG:value;`` structure in an MSD document.
 
@@ -75,7 +75,7 @@ def parse_msd(text: str) -> Iterator[MsdTag]:
 
     Yields
     ------
-    MsdTag
+    MSDTag
         Each tag encountered, in document order.
     """
     text = COMMENT_PATTERN.sub('', text)
@@ -99,7 +99,7 @@ def parse_msd(text: str) -> Iterator[MsdTag]:
         if not body.strip():
             continue
         params = body.split(':')
-        yield MsdTag(params[0].strip().upper(), tuple(param.strip() for param in params[1:]))
+        yield MSDTag(params[0].strip().upper(), tuple(param.strip() for param in params[1:]))
 
 
 def parse_float(value: str, default: float = 0.0) -> float:

@@ -1,19 +1,17 @@
 """
 Beat and time conversion matching StepMania's ``TimingData`` behaviour.
 
-The sign conventions below were read out of the StepMania source tree rather
-than assumed:
+The sign conventions below were read out of the StepMania source tree rather than assumed:
 
-* ``TimingData.cpp:1008`` sets ``start.last_time = -m_fBeat0OffsetInSeconds``,
-  so beat 0 occurs at ``-OFFSET`` seconds into the music file.
-* ``NotesLoaderSM.cpp:92`` assigns ``#OFFSET`` straight to
-  ``m_fBeat0OffsetInSeconds``, so the tag needs no transformation.
-* ``NotesLoaderDWI.cpp:629`` computes ``m_fBeat0OffsetInSeconds = -GAP/1000``
-  with ``GAP`` parsed as an integer, so DWI's GAP is the number of whole
-  milliseconds until beat 0.
+* ``TimingData.cpp:1008`` sets ``start.last_time = -m_fBeat0OffsetInSeconds``, so beat 0 occurs at
+  ``-OFFSET`` seconds into the music file.
+* ``NotesLoaderSM.cpp:92`` assigns ``#OFFSET`` straight to ``m_fBeat0OffsetInSeconds``, so the tag
+  needs no transformation.
+* ``NotesLoaderDWI.cpp:629`` computes ``m_fBeat0OffsetInSeconds = -GAP/1000`` with ``GAP`` parsed as
+  an integer, so DWI's GAP is the number of whole milliseconds until beat 0.
 
-A positive ``#OFFSET`` places beat 0 before the start of the audio; the small
-negative offsets typical of DDR simfiles place it just after.
+A positive ``#OFFSET`` places beat 0 before the start of the audio; the small negative offsets
+typical of DDR simfiles place it just after.
 """
 
 from __future__ import annotations
@@ -25,7 +23,7 @@ import operator
 
 __all__ = (
     'BEATS_PER_MEASURE',
-    'BpmSegment',
+    'BPMSegment',
     'StopSegment',
     'TimingData',
     'gap_ms_to_offset',
@@ -34,15 +32,15 @@ __all__ = (
 
 BEATS_PER_MEASURE = 4.0
 """
-Beats in one measure. DDR is 4/4 throughout and the ``.sm`` format hardcodes
-this, as time signatures exist only as an ``.ssc`` extension.
+Beats in one measure. DDR is 4/4 throughout and the ``.sm`` format hardcodes this, as time
+signatures exist only as an ``.ssc`` extension.
 
 :meta hide-value:
 """
 _BPM_EPSILON = 1e-6
 
 
-class BpmSegment(NamedTuple):
+class BPMSegment(NamedTuple):
     """A tempo in effect from a given beat onwards."""
 
     beat: float
@@ -100,7 +98,7 @@ def offset_to_gap_ms(offset: float) -> float:
 class TimingData:
     """Timing for one song: the beat-0 offset, tempo changes, and stops."""
 
-    bpms: tuple[BpmSegment, ...]
+    bpms: tuple[BPMSegment, ...]
     """Tempo segments, which must contain at least one entry."""
     offset: float = 0.0
     """The ``#OFFSET`` tag value in seconds. Beat 0 occurs at ``-offset``."""
@@ -198,7 +196,7 @@ class TimingData:
         TimingData
             Timing with a single tempo segment and no stops.
         """
-        return cls(bpms=(BpmSegment(0.0, bpm),), offset=offset)
+        return cls(bpms=(BPMSegment(0.0, bpm),), offset=offset)
 
     @property
     def is_constant_bpm(self) -> bool:
@@ -217,8 +215,7 @@ class TimingData:
         """
         Return a copy whose beat 0 moves later in the audio.
 
-        Because beat 0 sits at ``-offset``, moving it later decreases the
-        offset.
+        Because beat 0 sits at ``-offset``, moving it later decreases the offset.
 
         Parameters
         ----------
@@ -260,7 +257,7 @@ class TimingData:
         if bpms[0].beat > 0.0:
             # StepMania treats the first tempo as governing from beat 0 even
             # when the tag declares a later start beat.
-            bpms.insert(0, BpmSegment(0.0, bpms[0].bpm))
+            bpms.insert(0, BPMSegment(0.0, bpms[0].bpm))
         # Each event is (beat, kind, value); the kind orders tempo changes
         # before stops sharing a beat, matching StepMania's segment iteration.
         events = [(segment.beat, 0, segment.bpm) for segment in bpms[1:]]

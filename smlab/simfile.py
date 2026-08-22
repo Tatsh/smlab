@@ -11,13 +11,13 @@ from typing import TYPE_CHECKING
 
 from .chart import HOLD_HEAD, TAIL, TAP, Chart, Simfile, normalize_difficulty
 from .msd import parse_beat_value_list, parse_float, parse_msd, read_simfile_text
-from .timing import BpmSegment, StopSegment, TimingData, gap_ms_to_offset
+from .timing import BPMSegment, StopSegment, TimingData, gap_ms_to_offset
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
     from pathlib import Path
 
-    from .msd import MsdTag
+    from .msd import MSDTag
 
 __all__ = ('SimfileError', 'load_simfile')
 
@@ -59,7 +59,7 @@ class SimfileError(Exception):
     """Raised when a simfile cannot be parsed."""
 
 
-def _text(tags: Sequence[MsdTag], name: str) -> str:
+def _text(tags: Sequence[MSDTag], name: str) -> str:
     """
     Return the first parameter of the first occurrence of a tag.
 
@@ -236,7 +236,7 @@ def _dwi_notes_to_sm(stream: str) -> str:
     )
 
 
-def _dwi_charts(tags: Sequence[MsdTag]) -> Iterator[Chart]:
+def _dwi_charts(tags: Sequence[MSDTag]) -> Iterator[Chart]:
     """
     Yield the four-panel charts declared by a ``.dwi`` file.
 
@@ -260,7 +260,7 @@ def _dwi_charts(tags: Sequence[MsdTag]) -> Iterator[Chart]:
             )
 
 
-def _dwi_timing(tags: Sequence[MsdTag], path: Path) -> TimingData:
+def _dwi_timing(tags: Sequence[MSDTag], path: Path) -> TimingData:
     """
     Build timing from a ``.dwi`` file's tags.
 
@@ -286,11 +286,11 @@ def _dwi_timing(tags: Sequence[MsdTag], path: Path) -> TimingData:
         raise SimfileError(msg)
     # NotesLoaderDWI.cpp:629 computes OFFSET as -GAP/1000.
     offset = gap_ms_to_offset(parse_float(_text(tags, 'GAP')))
-    bpms = [BpmSegment(0.0, bpm)]
+    bpms = [BPMSegment(0.0, bpm)]
     # Change and freeze beats are indexed in quarter notes, and freeze
     # durations are expressed in milliseconds.
     bpms.extend(
-        BpmSegment(beat / 4.0, value)
+        BPMSegment(beat / 4.0, value)
         for beat, value in parse_beat_value_list(_text(tags, 'CHANGEBPM'))
         if value > 0
     )
@@ -330,7 +330,7 @@ def _load_dwi(path: Path, text: str) -> Simfile:
     )
 
 
-def _sm_charts(tags: Sequence[MsdTag]) -> Iterator[Chart]:
+def _sm_charts(tags: Sequence[MSDTag]) -> Iterator[Chart]:
     """
     Yield the charts declared by a ``.sm`` file.
 
@@ -358,7 +358,7 @@ def _sm_charts(tags: Sequence[MsdTag]) -> Iterator[Chart]:
             )
 
 
-def _ssc_charts(tags: Sequence[MsdTag]) -> Iterator[Chart]:
+def _ssc_charts(tags: Sequence[MSDTag]) -> Iterator[Chart]:
     """
     Yield the charts declared by an ``.ssc`` file.
 
@@ -393,7 +393,7 @@ def _ssc_charts(tags: Sequence[MsdTag]) -> Iterator[Chart]:
             pending = {}
 
 
-def _sm_timing(tags: Sequence[MsdTag], path: Path) -> TimingData:
+def _sm_timing(tags: Sequence[MSDTag], path: Path) -> TimingData:
     """
     Build timing from a ``.sm`` or ``.ssc`` file's tags.
 
@@ -415,7 +415,7 @@ def _sm_timing(tags: Sequence[MsdTag], path: Path) -> TimingData:
         If the file declares no usable tempo.
     """
     bpms = tuple(
-        BpmSegment(beat, value)
+        BPMSegment(beat, value)
         for beat, value in parse_beat_value_list(_text(tags, 'BPMS'))
         if value > 0
     )

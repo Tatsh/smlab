@@ -1,16 +1,15 @@
 """
 Beat-grid features built from separated stems.
 
-Two grids are used and they are deliberately different. Notes live on twelfths
-of a beat, because that is the rhythmic vocabulary charts are written in.
-Audio is sampled at twenty-fourths of a beat, because averaging a whole note
-slot destroys the attack shape that distinguishes a kick from a snare from a
-strummed chord. The network pools the fine grid down to the note grid itself,
-so it decides what to discard rather than having it discarded beforehand.
+Two grids are used and they are deliberately different. Notes live on twelfths of a beat, because
+that is the rhythmic vocabulary charts are written in. Audio is sampled at twenty-fourths of a beat,
+because averaging a whole note slot destroys the attack shape that distinguishes a kick from a snare
+from a strummed chord. The network pools the fine grid down to the note grid itself, so it decides
+what to discard rather than having it discarded beforehand.
 
-Each stem contributes its own channels, so "which layer is prominent right now"
-is something a model reads rather than infers. The mixture is kept alongside
-them because separation leaks, and the real signal is a useful fallback.
+Each stem contributes its own channels, so "which layer is prominent right now" is something a model
+reads rather than infers. The mixture is kept alongside them because separation leaks, and the real
+signal is a useful fallback.
 """
 
 from __future__ import annotations
@@ -47,9 +46,8 @@ FINE_SUBDIVISIONS = 24
 """
 Audio samples per beat.
 
-Twice the note grid, so the network sees the shape of an attack rather than its
-average. At 142 beats per minute one fine slot is 17.6 ms, close to the 5.8 ms
-hop of the underlying transform.
+Twice the note grid, so the network sees the shape of an attack rather than its average. At 142
+beats per minute one fine slot is 17.6 ms, close to the 5.8 ms hop of the underlying transform.
 
 :meta hide-value:
 """
@@ -80,11 +78,10 @@ SILENT_DECIBELS = -70.0
 Level below which a slot is treated as carrying no music, in decibels.
 
 Mel bands are measured against the loudest point of the song and floored at
-:py:data:`_DECIBEL_FLOOR`, so digital silence sits exactly on that floor while
-music runs far above it: over the tail of one song the played measures average
--29 to -35 dB and the dead air after them sits at -80. Anywhere in between
-separates the two, and this leaves ten decibels of room above the floor for a
-fade that has not quite reached it.
+:py:data:`_DECIBEL_FLOOR`, so digital silence sits exactly on that floor while music runs far above
+it: over the tail of one song the played measures average -29 to -35 dB and the dead air after them
+sits at -80. Anywhere in between separates the two, and this leaves ten decibels of room above the
+floor for a fade that has not quite reached it.
 
 :meta hide-value:
 """
@@ -149,8 +146,8 @@ def _layer_features(
         start = edges[index]
         stop = max(edges[index + 1], start + 1)
         output[index, :mels] = decibels[:, start:stop].mean(axis=1)
-        # The start edge is clipped inside the envelope and the stop edge is
-        # forced past it, so this slice never comes back empty.
+        # The start edge is clipped inside the envelope and the stop edge is forced past it, so
+        # this slice never comes back empty.
         window = onset[start:stop]
         output[index, mels] = window.mean()
         output[index, mels + 1] = window.max()
@@ -196,8 +193,8 @@ def mixture_loudness(features: NDArray[np.float16]) -> NDArray[np.float32]:
     """
     Return how loud the unseparated mixture is at each note slot, in decibels.
 
-    The note grid is half the resolution the features are built on, so each
-    slot averages the two fine slots it covers.
+    The note grid is half the resolution the features are built on, so each slot averages the two
+    fine slots it covers.
 
     Parameters
     ----------
@@ -214,8 +211,8 @@ def mixture_loudness(features: NDArray[np.float16]) -> NDArray[np.float32]:
     slots = bands.shape[0] // 2
     if slots == 0:
         return np.zeros(0, dtype=np.float32)
-    # The loudest band, not the average of them. A sound occupying one corner
-    # of the spectrum leaves every other band on the floor, so an average reads
-    # a held note or a solo instrument as though it were silence.
+    # The loudest band, not the average of them. A sound occupying one corner of the spectrum
+    # leaves every other band on the floor, so an average reads a held note or a solo instrument as
+    # though it were silence.
     folded = bands[: 2 * slots].reshape(slots, 2 * MIXTURE_MELS)
     return np.asarray(folded.max(axis=1), dtype=np.float32)

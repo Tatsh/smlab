@@ -1,11 +1,10 @@
 """
 Deciding which grid slots carry a note.
 
-The placement head ranks every slot, but taking the highest scores outright
-produces a chart that is wrong in two ways: fine subdivisions win wherever the
-audio is loud, so busy bars flood with sixteenths while quiet ones empty, and
-the holes that result line up with nothing. Both are fixed here rather than in
-the model, by laying down coarse subdivisions before fine ones and by moving
+The placement head ranks every slot, but taking the highest scores outright produces a chart that is
+wrong in two ways: fine subdivisions win wherever the audio is loud, so busy bars flood with
+sixteenths while quiet ones empty, and the holes that result line up with nothing. Both are fixed
+here rather than in the model, by laying down coarse subdivisions before fine ones and by moving
 rests onto bar lines.
 """
 
@@ -35,14 +34,13 @@ _SILENCE_DROP = 6.0
 """
 How far below a song's typical measure a measure must fall to be left silent.
 
-In units of the median absolute deviation of the per-measure loudness, so only
-a measure that is anomalously quiet for its own song rests.
+In units of the median absolute deviation of the per-measure loudness, so only a measure that is
+anomalously quiet for its own song rests.
 
-Half of all corpus charts rated twelve to eighteen have no empty measure inside
-their body at all, and three quarters have at most 1.4 per cent, so the bar for
-resting has to be high. Measured on one rating sixteen chart, three median
-deviations leaves 6.4 per cent of the body empty, four leaves 3.2 and six
-leaves 1.0 — a single measure, in the outro.
+Half of all corpus charts rated twelve to eighteen have no empty measure inside their body at all,
+and three quarters have at most 1.4 per cent, so the bar for resting has to be high. Measured on one
+rating sixteen chart, three median deviations leaves 6.4 per cent of the body empty, four leaves 3.2
+and six leaves 1.0 — a single measure, in the outro.
 """
 
 
@@ -87,8 +85,8 @@ def choose_slots(
     config : GenerationConfig
         Generation settings.
     loudness : :py:class:`~numpy.ndarray` | None
-        Decibel level of the mixture at each slot, or ``None`` to decide
-        silence from the scores alone.
+        Decibel level of the mixture at each slot, or ``None`` to decide silence from the scores
+        alone.
 
     Returns
     -------
@@ -104,21 +102,19 @@ def choose_slots(
         else max(round(FAST_JACK_SECONDS / max(seconds_per_slot, 1e-6)), 1)
     )
     scores = on_grid(logits, triplets=config.triplets)
-    # Which measures rest is otherwise decided from the placement scores, and
-    # those are a model output: over dead air the network has nothing to read
-    # but still returns a number, and a whole song of them can be flat enough
-    # that the trailing silence never looks unusual. The audio itself says so
-    # outright, so slots with no music in them are put out of reach first.
+    # Which measures rest is otherwise decided from the placement scores, and those are a model
+    # output: over dead air the network has nothing to read but still returns a number, and a whole
+    # song of them can be flat enough that the trailing silence never looks unusual. The audio
+    # itself says so outright, so slots with no music in them are put out of reach first.
     audible = _audible(loudness, len(scores))
     scores = np.where(audible, scores, -np.inf).astype(np.float32)
     order = np.argsort(scores)[::-1]
     within = np.arange(len(logits)) % SUBDIVISIONS_PER_BEAT
     taken = np.zeros(len(logits), dtype=np.bool_)
     chosen: list[int] = []
-    # Quarters are laid down across the whole song before any eighth is taken,
-    # and eighths before any sixteenth. Ranking every subdivision together lets
-    # sixteenths win wherever the audio is loud, which both floods those bars
-    # with fast notes and leaves the quiet ones with nothing at all.
+    # Quarters are laid down across the whole song before any eighth is taken, and eighths before
+    # any sixteenth. Ranking every subdivision together lets sixteenths win wherever the audio is
+    # loud, which both floods those bars with fast notes and leaves the quiet ones with nothing.
     playable, seeded = seed_pulse(scores, taken, wanted)
     playable &= audible
     chosen.extend(seeded)
@@ -140,16 +136,14 @@ def seed_pulse(
     """
     Put one note in every measure that has any music in it.
 
-    Ranking a subdivision family across the whole song means a quiet passage is
-    outbid by a loud one, however long the song is and wherever the quiet part
-    falls. A song whose second half calms down keeps its peaks — the strongest
-    slots there score as highly as anywhere — but loses on the average, so the
-    quarter budget drains into the louder half and the rest goes silent.
+    Ranking a subdivision family across the whole song means a quiet passage is outbid by a loud
+    one, however long the song is and wherever the quiet part falls. A song whose second half calms
+    down keeps its peaks — the strongest slots there score as highly as anywhere — but loses on the
+    average, so the quarter budget drains into the louder half and the rest goes silent.
 
-    Seeding the strongest beat of each measure first decouples the two: which
-    measures play is decided locally, and how busy each one gets is still
-    decided globally by score. Only the quietest measures are left out, at the
-    7 per cent rate real charts leave measures empty.
+    Seeding the strongest beat of each measure first decouples the two: which measures play is
+    decided locally, and how busy each one gets is still decided globally by score. Only the
+    quietest measures are left out, at the 7 per cent rate real charts leave measures empty.
 
     Parameters
     ----------
@@ -163,15 +157,14 @@ def seed_pulse(
     Returns
     -------
     tuple[:py:class:`~numpy.ndarray`, list[int]]
-        Which slots belong to a measure that plays at all, and one seeded slot
-        per measure that earns a note.
+        Which slots belong to a measure that plays at all, and one seeded slot per measure that
+        earns a note.
     """
     everywhere = np.ones(len(scores), dtype=np.bool_)
-    # Rounded up, not down. A song almost never ends on a bar line, and
-    # truncating leaves the final part-measure out of the silence check
-    # altogether: it keeps the default of being playable, so the fill puts
-    # notes into a fade-out or the dead air after it. Padding with negative
-    # infinity lets a short last measure be judged on the slots it does have.
+    # Rounded up, not down. A song almost never ends on a bar line, and truncating leaves the final
+    # part-measure out of the silence check altogether: it keeps the default of being playable, so
+    # the fill puts notes into a fade-out or the dead air after it. Padding with negative infinity
+    # lets a short last measure be judged on the slots it does have.
     measures = -(-len(scores) // MEASURE_SLOTS)
     if measures < _MIN_SEEDED_MEASURES or wanted < measures:
         return everywhere, []
@@ -189,9 +182,8 @@ def seed_pulse(
     for measure in range(measures):
         start = measure * MEASURE_SLOTS
         if not playing[measure] or loudest[measure] <= quiet:
-            # The quietest measures are left alone entirely, so the chart keeps
-            # the whole-measure rests real charts have rather than trickling a
-            # note into every bar.
+            # The quietest measures are left alone entirely, so the chart keeps the whole-measure
+            # rests real charts have rather than trickling a note into every bar.
             playable[start : start + MEASURE_SLOTS] = False
             continue
         slot = start + int(strongest[measure])
@@ -204,16 +196,15 @@ def silence_threshold(loudest: NDArray[np.float32]) -> float:
     """
     Decide how quiet a measure has to be before it carries no note.
 
-    Dropping a fixed share of measures asks the wrong question. Charts rated
-    twelve to eighteen leave 7 per cent of their measures empty counting from
-    the start, but the median chart has a five-measure intro and **no** empty
-    measure at all inside its body; three quarters have at most 1.4 per cent,
-    and 74 per cent of the holes that do occur are a single measure. A quota
-    therefore eats into the body of any song whose intro is short.
+    Dropping a fixed share of measures asks the wrong question. Charts rated twelve to eighteen
+    leave 7 per cent of their measures empty counting from the start, but the median chart has a
+    five-measure intro and **no** empty measure at all inside its body; three quarters have at most
+    1.4 per cent, and 74 per cent of the holes that do occur are a single measure. A quota therefore
+    eats into the body of any song whose intro is short.
 
-    Silence is a property of the music instead. A measure rests when it is far
-    quieter than the song's own typical measure, which leaves an intro or a
-    breakdown empty and a song that never lets up entirely full.
+    Silence is a property of the music instead. A measure rests when it is far quieter than the
+    song's own typical measure, which leaves an intro or a breakdown empty and a song that never
+    lets up entirely full.
 
     Parameters
     ----------
@@ -286,13 +277,12 @@ def tidy_rests(
     """
     Move rests onto bar lines.
 
-    Taking the highest scoring slots over the whole song leaves a hole wherever
-    the score dips, and a hole has no reason to line up with anything. Charts
-    rest for a phrase: measured over 5893 rests in the corpus, 28.7 per cent
-    begin on a downbeat and 29.3 per cent end on a bar line, against 9.5 per
-    cent each for holes left this way. Emptying the measures that were barely
-    used and giving their notes to measures that were already playing turns
-    ragged holes into whole-measure rests without changing the note count.
+    Taking the highest scoring slots over the whole song leaves a hole wherever the score dips, and
+    a hole has no reason to line up with anything. Charts rest for a phrase: measured over 5893
+    rests in the corpus, 28.7 per cent begin on a downbeat and 29.3 per cent end on a bar line,
+    against 9.5 per cent each for holes left this way. Emptying the measures that were barely used
+    and giving their notes to measures that were already playing turns ragged holes into
+    whole-measure rests without changing the note count.
 
     Parameters
     ----------
@@ -321,10 +311,9 @@ def tidy_rests(
     for slot in chosen:
         if slot // MEASURE_SLOTS in thin:
             taken[slot] = False
-    # A rest that simply begins wherever the previous measure trailed off starts
-    # off the beat. Charts hit the downbeat and then fall silent, which is why
-    # 28.7 per cent of corpus rests begin on one, so the downbeat of an emptied
-    # measure is kept and everything after it dropped.
+    # A rest that simply begins wherever the previous measure trailed off starts off the beat.
+    # Charts hit the downbeat and then fall silent, which is why 28.7 per cent of corpus rests begin
+    # on one, so the downbeat of an emptied measure is kept and everything after it dropped.
     for measure in thin:
         downbeat = measure * MEASURE_SLOTS
         if downbeat < len(taken) and playable[downbeat]:
