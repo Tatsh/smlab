@@ -5,11 +5,13 @@ from __future__ import annotations
 from smlab.features import (
     FINE_SUBDIVISIONS,
     MIXTURE_MELS,
+    SILENT_DECIBELS,
     STEM_CHANNELS,
     STEM_MELS,
     TOTAL_CHANNELS,
     fine_features,
     grid_times,
+    mixture_loudness,
 )
 from smlab.stems import STEM_NAMES
 from smlab.timing import TimingData
@@ -70,3 +72,32 @@ def test_a_loud_stem_reads_differently_from_a_silent_one() -> None:
     loud = fine_features(dict.fromkeys(STEM_NAMES, _tone()), mixture, _TIMING, sample_rate=_RATE)
     quiet = fine_features({}, mixture, _TIMING, sample_rate=_RATE)
     assert not np.array_equal(loud, quiet)
+
+
+def test_loudness_tells_dead_air_from_music() -> None:
+    # Bands are measured against the loudest point of the song, so silence only
+    # reads as silence alongside the music it follows.
+    both = np.concatenate([_tone(), np.zeros(_RATE * 2, dtype=np.float32)])
+    loudness = mixture_loudness(fine_features({}, both, _TIMING, sample_rate=_RATE))
+    half = len(loudness) // 2
+    assert loudness[:half].min() > SILENT_DECIBELS
+    assert loudness[half + 4 :].max() <= SILENT_DECIBELS
+
+
+def test_a_sound_filling_one_band_is_not_mistaken_for_silence() -> None:
+    # Averaging the bands reads a held note or a solo instrument as dead air,
+    # because every band it does not occupy sits on the floor.
+    both = np.concatenate([_tone(hertz=440.0), np.zeros(_RATE * 2, dtype=np.float32)])
+    loudness = mixture_loudness(fine_features({}, both, _TIMING, sample_rate=_RATE))
+    assert loudness[: len(loudness) // 2].min() > SILENT_DECIBELS
+
+
+def test_loudness_is_one_value_per_note_slot() -> None:
+    # The note grid is half the resolution the features are built on.
+    features = fine_features({}, _tone(), _TIMING, sample_rate=_RATE)
+    assert len(mixture_loudness(features)) == features.shape[0] // 2
+
+
+def test_loudness_of_nothing_is_nothing() -> None:
+    empty = np.zeros((0, TOTAL_CHANNELS), dtype=np.float16)
+    assert len(mixture_loudness(empty)) == 0

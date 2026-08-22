@@ -240,3 +240,36 @@ def test_a_rested_measure_that_never_plays_keeps_no_downbeat() -> None:
     playable[last * MEASURE_SLOTS :] = False
     tidied = tidy_rests(list(chosen), order, taken, 0, playable)
     assert last * MEASURE_SLOTS not in tidied
+
+
+def test_slots_with_no_music_in_them_are_never_chosen() -> None:
+    # Which measures rest is otherwise read off the placement scores, and over
+    # dead air the network still returns a number. The audio says so outright.
+    measures = 16
+    scores = _scores(measures)
+    loudness = np.full(len(scores), -30.0, dtype=np.float32)
+    silent = 12 * MEASURE_SLOTS
+    loudness[silent:] = -80.0
+    chosen = choose_slots(scores, _TIMING, GenerationConfig(nps=6.0), loudness)
+    assert chosen
+    assert max(chosen) < silent
+
+
+def test_a_fade_that_has_not_reached_the_floor_still_plays() -> None:
+    scores = _scores(8)
+    loudness = np.full(len(scores), -65.0, dtype=np.float32)
+    assert choose_slots(scores, _TIMING, GenerationConfig(nps=4.0), loudness)
+
+
+def test_loudness_shorter_than_the_grid_leaves_the_rest_playable() -> None:
+    # The two grids are derived separately, so their lengths need not agree.
+    scores = _scores(8)
+    loudness = np.full(len(scores) - 5, -30.0, dtype=np.float32)
+    assert choose_slots(scores, _TIMING, GenerationConfig(nps=4.0), loudness)
+
+
+def test_a_song_that_is_silent_throughout_is_charted_at_all() -> None:
+    # Nothing is audible, so nothing can be placed rather than everything.
+    scores = _scores(8)
+    loudness = np.full(len(scores), -80.0, dtype=np.float32)
+    assert choose_slots(scores, _TIMING, GenerationConfig(nps=4.0), loudness) == []

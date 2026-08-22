@@ -32,11 +32,13 @@ if TYPE_CHECKING:
 __all__ = (
     'FINE_SUBDIVISIONS',
     'MIXTURE_MELS',
+    'SILENT_DECIBELS',
     'STEM_CHANNELS',
     'STEM_MELS',
     'TOTAL_CHANNELS',
     'fine_features',
     'grid_times',
+    'mixture_loudness',
 )
 
 log = logging.getLogger(__name__)
@@ -73,6 +75,19 @@ TOTAL_CHANNELS = len(STEM_NAMES) * STEM_CHANNELS + MIXTURE_MELS + 2
 """
 _N_FFT = 1024
 _DECIBEL_FLOOR = -80.0
+SILENT_DECIBELS = -70.0
+"""
+Level below which a slot is treated as carrying no music, in decibels.
+
+Mel bands are measured against the loudest point of the song and floored at
+:py:data:`_DECIBEL_FLOOR`, so digital silence sits exactly on that floor while
+music runs far above it: over the tail of one song the played measures average
+-29 to -35 dB and the dead air after them sits at -80. Anywhere in between
+separates the two, and this leaves ten decibels of room above the floor for a
+fade that has not quite reached it.
+
+:meta hide-value:
+"""
 
 
 def grid_times(timing: TimingData, duration: float) -> NDArray[np.float64]:
@@ -175,3 +190,32 @@ def fine_features(
     ]
     blocks.append(_layer_features(mixture, times, MIXTURE_MELS, sample_rate))
     return np.concatenate(blocks, axis=1).astype(np.float16)
+
+
+def mixture_loudness(features: NDArray[np.float16]) -> NDArray[np.float32]:
+    """
+    Return how loud the unseparated mixture is at each note slot, in decibels.
+
+    The note grid is half the resolution the features are built on, so each
+    slot averages the two fine slots it covers.
+
+    Parameters
+    ----------
+    features : :py:class:`~numpy.ndarray`
+        Fine-grid features from :py:func:`fine_features`.
+
+    Returns
+    -------
+    :py:class:`~numpy.ndarray`
+        One decibel level per note slot, taken from its loudest mel band.
+    """
+    start = len(STEM_NAMES) * STEM_CHANNELS
+    bands = np.asarray(features[:, start : start + MIXTURE_MELS], dtype=np.float32)
+    slots = bands.shape[0] // 2
+    if slots == 0:
+        return np.zeros(0, dtype=np.float32)
+    # The loudest band, not the average of them. A sound occupying one corner
+    # of the spectrum leaves every other band on the floor, so an average reads
+    # a held note or a solo instrument as though it were silence.
+    folded = bands[: 2 * slots].reshape(slots, 2 * MIXTURE_MELS)
+    return np.asarray(folded.max(axis=1), dtype=np.float32)

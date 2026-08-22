@@ -18,6 +18,7 @@ import numpy as np
 from .constraints import on_grid, subdivision_quota, thin_measures
 from .dataset import SUBDIVISIONS_PER_BEAT
 from .encoder import MEASURE_SLOTS
+from .features import SILENT_DECIBELS
 from .playability import FAST_JACK_SECONDS
 
 if TYPE_CHECKING:
@@ -45,8 +46,34 @@ leaves 1.0 — a single measure, in the outro.
 """
 
 
+def _audible(loudness: NDArray[np.float32] | None, slots: int) -> NDArray[np.bool_]:
+    """
+    Mark the slots whose audio carries something to chart.
+
+    Parameters
+    ----------
+    loudness : :py:class:`~numpy.ndarray` | None
+        Decibel level per slot, or ``None`` when it was not measured.
+    slots : int
+        Number of slots the chart spans.
+
+    Returns
+    -------
+    :py:class:`~numpy.ndarray`
+        One flag per slot, all set when no level was supplied.
+    """
+    if loudness is None:
+        return np.ones(slots, dtype=np.bool_)
+    measured = np.full(slots, SILENT_DECIBELS + 1.0, dtype=np.float32)
+    measured[: min(len(loudness), slots)] = loudness[:slots]
+    return np.asarray(measured > SILENT_DECIBELS, dtype=np.bool_)
+
+
 def choose_slots(
-    logits: NDArray[np.float32], timing: TimingData, config: GenerationConfig
+    logits: NDArray[np.float32],
+    timing: TimingData,
+    config: GenerationConfig,
+    loudness: NDArray[np.float32] | None = None,
 ) -> list[int]:
     """
     Take the highest scoring slots up to the rate the rating implies.
@@ -59,6 +86,9 @@ def choose_slots(
         Timing used to convert slots into seconds.
     config : GenerationConfig
         Generation settings.
+    loudness : :py:class:`~numpy.ndarray` | None
+        Decibel level of the mixture at each slot, or ``None`` to decide
+        silence from the scores alone.
 
     Returns
     -------
@@ -74,6 +104,13 @@ def choose_slots(
         else max(round(FAST_JACK_SECONDS / max(seconds_per_slot, 1e-6)), 1)
     )
     scores = on_grid(logits, triplets=config.triplets)
+    # Which measures rest is otherwise decided from the placement scores, and
+    # those are a model output: over dead air the network has nothing to read
+    # but still returns a number, and a whole song of them can be flat enough
+    # that the trailing silence never looks unusual. The audio itself says so
+    # outright, so slots with no music in them are put out of reach first.
+    audible = _audible(loudness, len(scores))
+    scores = np.where(audible, scores, -np.inf).astype(np.float32)
     order = np.argsort(scores)[::-1]
     within = np.arange(len(logits)) % SUBDIVISIONS_PER_BEAT
     taken = np.zeros(len(logits), dtype=np.bool_)
@@ -83,6 +120,7 @@ def choose_slots(
     # sixteenths win wherever the audio is loud, which both floods those bars
     # with fast notes and leaves the quiet ones with nothing at all.
     playable, seeded = seed_pulse(scores, taken, wanted)
+    playable &= audible
     chosen.extend(seeded)
     families = (
         (within % 12 == 0) & playable,

@@ -35,7 +35,7 @@ from .constraints import (
 )
 from .dataset import SUBDIVISIONS_PER_BEAT, difficulty_index
 from .encoder import MAX_METER, MAX_RATE, MEASURE_SLOTS, STYLES
-from .features import fine_features
+from .features import fine_features, mixture_loudness
 from .heads import MAX_DELTA, ChartModel, SelectionBatch
 from .slots import choose_slots
 from .stems import separate
@@ -202,7 +202,7 @@ def generate_rows(  # noqa: PLR0914
         Grid slot and four panel codes for each generated row.
     """
     encoded, logits = encode_song(model, features, config, device)
-    slots = choose_slots(logits, timing, config)
+    slots = choose_slots(logits, timing, config, mixture_loudness(features))
     if not slots:
         return []
     rng = np.random.default_rng(config.seed)
