@@ -10,10 +10,13 @@ from smlab.train_offset import (
     OffsetTrainingConfig,
     build_envelope_cache,
     cyclic_error,
+    train_offset_model,
     usable,
 )
 import numpy as np
 import pytest
+import soundfile as sf  # type: ignore[import-untyped]  # No stubs are published.
+import torch
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -119,11 +122,13 @@ def test_the_label_does_not_move_with_the_excerpt(tmp_path: Path) -> None:
 
 def test_the_split_is_disjoint(tmp_path: Path) -> None:
     for index in range(16):
-        _write_song(tmp_path / f'{index:016x}.npz', -0.1 * index)
+        _write_song(tmp_path / f'{index:08x}00000000.npz', -0.1 * index)
     train = FoldedProfiles(tmp_path, OffsetTrainingConfig())
     valid = FoldedProfiles(tmp_path, OffsetTrainingConfig(), validation=True)
     assert not set(train.paths) & set(valid.paths)
     assert len(train.paths) + len(valid.paths) == 16
+    assert train.paths
+    assert valid.paths
 
 
 def test_each_worker_draws_its_own_excerpts(tmp_path: Path, mocker: MockerFixture) -> None:
@@ -152,3 +157,85 @@ def test_unusable_songs_are_not_cached(tmp_path: Path) -> None:
     written = build_envelope_cache([_record(constant_bpm=False, audio='missing.mp3')], tmp_path)
     assert written == 0
     assert not list(tmp_path.glob('*.npz'))
+
+
+def test_an_empty_split_says_so_rather_than_indexing_off_the_end(tmp_path: Path) -> None:
+    with pytest.raises(IndexError, match='no songs'):
+        FoldedProfiles(tmp_path, OffsetTrainingConfig())[0]
+
+
+def test_a_song_is_cached_with_its_labels(tmp_path: Path) -> None:
+    audio = tmp_path / 'song.wav'
+    sf.write(audio, np.zeros(22050 * 35, dtype='float32'), 22050)
+    destination = tmp_path / 'envelopes'
+    assert build_envelope_cache([_record(audio=str(audio), offset=-0.048)], destination) == 1
+    with np.load(next(destination.glob('*.npz'))) as data:
+        assert data['envelopes'].shape[0] == _BANDS
+        assert float(data['bpm']) == pytest.approx(128.0)
+
+
+def test_a_song_already_cached_is_counted_but_not_rebuilt(tmp_path: Path) -> None:
+    audio = tmp_path / 'song.wav'
+    sf.write(audio, np.zeros(22050 * 35, dtype='float32'), 22050)
+    destination = tmp_path / 'envelopes'
+    build_envelope_cache([_record(audio=str(audio), offset=-0.048)], destination)
+    written = next(destination.glob('*.npz'))
+    stamp = written.stat().st_mtime_ns
+    assert build_envelope_cache([_record(audio=str(audio), offset=-0.048)], destination) == 1
+    assert written.stat().st_mtime_ns == stamp
+
+
+def test_a_song_that_cannot_be_read_is_skipped(tmp_path: Path) -> None:
+    broken = tmp_path / 'broken.wav'
+    broken.write_bytes(b'not audio at all')
+    assert build_envelope_cache([_record(audio=str(broken), offset=-0.048)], tmp_path / 'out') == 0
+
+
+def test_a_song_too_short_to_fold_is_skipped(tmp_path: Path) -> None:
+    # A fold needs several bars before it means anything.
+    audio = tmp_path / 'brief.wav'
+    sf.write(audio, np.zeros(22050 * 3, dtype='float32'), 22050)
+    assert build_envelope_cache([_record(audio=str(audio), offset=-0.048)], tmp_path / 'out') == 0
+
+
+def test_progress_is_reported_for_a_long_run(tmp_path: Path, mocker: MockerFixture) -> None:
+    # Separating a corpus takes hours, so the run has to say where it is.
+    audio = tmp_path / 'song.wav'
+    sf.write(audio, np.zeros(22050 * 35, dtype='float32'), 22050)
+    mocker.patch('smlab.train_offset._PROGRESS_EVERY', 1)
+    assert (
+        build_envelope_cache([_record(audio=str(audio), offset=-0.048)] * 3, tmp_path / 'out') == 3
+    )
+
+
+def test_training_keeps_the_best_weights(tmp_path: Path) -> None:
+    for index in range(16):
+        _write_song(tmp_path / f'{index:08x}00000000.npz', -0.1 * index)
+    output = tmp_path / 'checkpoints' / 'offset.pt'
+    measured = train_offset_model(
+        tmp_path, output, OffsetTrainingConfig(batch_size=2, epochs=1, windows=1)
+    )
+    assert set(measured) == {'exact', 'half_beat_out', 'within_one_bin', 'within_two_bins'}
+    assert output.is_file()
+    assert 'model' in torch.load(output, weights_only=False)
+
+
+def test_training_falls_back_to_the_default_settings(tmp_path: Path) -> None:
+    for index in range(16):
+        _write_song(tmp_path / f'{index:08x}00000000.npz', -0.1 * index)
+    assert train_offset_model(tmp_path, tmp_path / 'offset.pt', OffsetTrainingConfig(epochs=0)) == {
+        'within_one_bin': 0.0
+    }
+
+
+def test_an_epoch_that_does_not_improve_leaves_the_checkpoint_alone(tmp_path: Path) -> None:
+    # Only the best epoch is kept, so a later one that scores no better must
+    # not overwrite it.
+    for index in range(16):
+        _write_song(tmp_path / f'{index:08x}00000000.npz', -0.1 * index)
+    torch.manual_seed(0)
+    output = tmp_path / 'offset.pt'
+    best = train_offset_model(
+        tmp_path, output, OffsetTrainingConfig(batch_size=2, epochs=4, windows=1)
+    )
+    assert output.is_file() == (best['within_one_bin'] > 0.0)
