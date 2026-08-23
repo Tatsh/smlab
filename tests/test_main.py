@@ -597,6 +597,60 @@ def test_generating_says_when_the_beat_jumps(
     assert 'The beat jumps at 12 s, 34 s' in result.output
 
 
+def test_drift_says_when_no_tempo_can_hold_the_grid(
+    runner: CliRunner, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    # Warps that still leave the grid outside the tolerance have not done the job, and saying so is
+    # the difference between a limitation and a surprise.
+    mocker.patch(
+        'smlab.main.measure_tempo',
+        return_value=[
+            TempoReading(seconds=20.0, bpm=128.0, slip=0.05),
+            TempoReading(seconds=60.0, bpm=127.0, slip=0.05),
+        ],
+    )
+    mocker.patch(
+        'smlab.main.fit_warps',
+        return_value=WarpFit(
+            warps=[Warp(seconds=0.0, bpm=128.0), Warp(seconds=60.0, bpm=127.0)],
+            splices=[],
+            slack=0.054,
+        ),
+    )
+    result = runner.invoke(main, ['drift', str(_audio(tmp_path / 'song.wav')), '--bpm', '128'])
+    assert result.exit_code == 0, result.output
+    assert 'still misses by up to 54 ms, against the 20 ms asked for' in result.output
+
+
+def test_drift_draws_the_grid_over_the_audio_when_asked(
+    runner: CliRunner, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    mocker.patch(
+        'smlab.main.measure_tempo',
+        return_value=[TempoReading(seconds=20.0, bpm=128.0, slip=0.0)],
+    )
+    mocker.patch(
+        'smlab.main.fit_warps',
+        return_value=WarpFit(warps=[Warp(seconds=0.0, bpm=128.0)], splices=[]),
+    )
+    result = runner.invoke(
+        main,
+        [
+            'drift',
+            str(_audio(tmp_path / 'song.wav')),
+            '--bpm',
+            '128',
+            '--offset',
+            '-0.25',
+            '--image',
+            str(tmp_path / 'beats.png'),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert 'beat 0 at 0.2500 s (offset -0.2500) and a beat every 0.4688 s' in result.output
+    assert (tmp_path / 'beats.png').is_file()
+
+
 def test_drift_calls_a_steady_song_steady(
     runner: CliRunner, tmp_path: Path, mocker: MockerFixture
 ) -> None:

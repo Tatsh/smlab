@@ -124,6 +124,59 @@ def test_a_song_that_slips_once_but_keeps_its_tempo_is_still_one_tempo(tmp_path:
     assert fit.splices == pytest.approx([60.0], abs=10.0)
 
 
+def test_an_abrupt_change_of_tempo_is_kept_even_though_it_looks_like_a_jump(
+    tmp_path: Path,
+) -> None:
+    # A tempo that leaves and comes back is treated as the beat jumping rather than as music, and
+    # a clean change reads that way at first because the window straddling it reports a tempo
+    # belonging to neither side. What separates them is that here the two sides genuinely differ,
+    # so the change has to survive.
+    path = _clicks(tmp_path / 'step.wav', ((128.0, 100.0), (130.0, 100.0)))
+    fit = fit_warps(path, 128.0)
+    assert len(fit.warps) > 1
+    assert fit.warps[0].bpm == pytest.approx(128.0, abs=0.2)
+    assert fit.warps[-1].bpm == pytest.approx(130.0, abs=0.2)
+    assert fit.splices == []
+
+
+def _wandering(
+    path: Path, seconds: float, *, amplitude: float, cycle: float, steps: tuple[float, ...] = ()
+) -> Path:
+    """Write a click track at one tempo whose beats slide back and forth, and may also jump."""
+    track = np.zeros(int(_RATE * seconds), dtype=np.float32)
+    period = 60.0 / 128.0
+    for index in range(int(seconds / period)):
+        at = index * period + amplitude * np.sin(2.0 * np.pi * index * period / cycle)
+        at += 0.05 * sum(1 for step in steps if index * period > step)
+        start = int(at * _RATE)
+        if 0 <= start < len(track) - 300:
+            track[start : start + 300] = 1.0
+    sf.write(path, track, _RATE)
+    return path
+
+
+def test_a_beat_that_wanders_and_returns_keeps_one_tempo(tmp_path: Path) -> None:
+    # The grid cannot hold within the tolerance here, so the track is cut into pieces, but every
+    # piece reads the same tempo and a tempo change that changes no tempo is not worth writing.
+    path = _wandering(tmp_path / 'wander.wav', 150.0, amplitude=0.03, cycle=40.0)
+    fit = fit_warps(path, 128.0)
+    assert [warp.seconds for warp in fit.warps] == [0.0]
+    assert fit.warps[0].bpm == pytest.approx(128.0, abs=0.1)
+    assert fit.splices == []
+    # It says so, rather than pretending the grid fits.
+    assert fit.slack > 0.020
+
+
+def test_a_bend_that_stops_paying_off_once_refitted_is_dropped(tmp_path: Path) -> None:
+    # Where the bends go is decided on stretches judged separately, and the tempi then come off one
+    # line fitted through all of them at once, which can leave a bend separating two tempi that no
+    # longer differ enough to be worth a marker.
+    path = _wandering(tmp_path / 'both.wav', 200.0, amplitude=0.02, cycle=35.0, steps=(60.0,))
+    fit = fit_warps(path, 128.0)
+    assert [warp.seconds for warp in fit.warps] == [0.0]
+    assert fit.warps[0].bpm == pytest.approx(128.0, abs=0.2)
+
+
 def test_a_song_too_short_to_fit_a_segment_is_fitted_nothing(tmp_path: Path) -> None:
     fit = fit_warps(_clicks(tmp_path / 'brief.wav', ((128.0, 6.0),)), 128.0, **_FIT)
     assert fit.warps == []

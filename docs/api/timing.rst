@@ -13,10 +13,16 @@ Tempo estimation
 .. automodule:: smlab.tempo
    :members:
 
-Tempo drift
------------
+Measuring tempo drift
+---------------------
 
-.. automodule:: smlab.warp
+.. automodule:: smlab.warp.fit
+   :members:
+
+Drawing the grid over the audio
+-------------------------------
+
+.. automodule:: smlab.warp.image
    :members:
 
 What a chart demands of a player

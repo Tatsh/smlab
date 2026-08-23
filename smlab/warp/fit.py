@@ -418,33 +418,6 @@ def _segments(
     return bounds[::-1]
 
 
-def _tempo(
-    times: NDArray[np.float64], phases: NDArray[np.float64], lo: int, hi: int, bpm: float
-) -> float:
-    """
-    Read the tempo off the slope of one piece of the phase track.
-
-    Parameters
-    ----------
-    times : :py:class:`~numpy.ndarray`
-        Times of each measurement, in seconds.
-    phases : :py:class:`~numpy.ndarray`
-        Unwrapped phase at each of those times, in seconds.
-    lo : int
-        First measurement of the piece.
-    hi : int
-        One past the last measurement of the piece.
-    bpm : float
-        Reference tempo the phase was tracked against.
-
-    Returns
-    -------
-    float
-        Tempo over the piece, in beats per minute.
-    """
-    return bpm * (1.0 - float(np.polyfit(times[lo:hi], phases[lo:hi], 1)[0]))
-
-
 def _spread(times: NDArray[np.float64], phases: NDArray[np.float64], slope: float) -> float:
     """
     Return how far apart the extremes sit once a given drift is taken out.

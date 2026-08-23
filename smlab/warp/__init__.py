@@ -14,10 +14,11 @@ from .fit import (
     fit_warps,
     measure_tempo,
 )
-from .image import write_drift
+from .image import DEFAULT_ROW_SECONDS, write_drift
 
 __all__ = (
     'DEFAULT_HOP',
+    'DEFAULT_ROW_SECONDS',
     'DEFAULT_SHORTEST',
     'DEFAULT_SPAN',
     'DEFAULT_TOLERANCE',

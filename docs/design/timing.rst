@@ -102,18 +102,42 @@ do not undo themselves, so a tempo excursion that comes back to where it started
 remains is deliberately conservative — a phase step is left uncorrected, because no tempo marker can
 correct one.
 
-Segments joined this way take the middle tempo of their pieces by duration rather than a line
-refitted across the whole group, since a line drawn through a step comes out tilted and would
-reintroduce the error that was just removed.
+A step joined up this way is reported rather than quietly absorbed, because it is a fact about the
+audio worth knowing: the beat moved without changing speed, which is what an edit spliced into a
+recording looks like, and the grid is unreliable around it however the warps are placed. ``smlab
+drift`` and ``generate`` both say where those are, and both say that no warp will repair them.
+
+Where the bends go is settled on stretches judged separately, but the tempi come off the single
+bent line, so the two can disagree: a bend that looked worthwhile may end up separating tempi that
+no longer differ enough to be worth a marker. Those are dropped and the line refitted, until every
+remaining bend earns its place.
 
 That is the division of labour a warp tool actually has: the measurement is reliable, the decision
 is not, so the measurement is automatic and the decision is yours. ``--warp`` with no value accepts
-the fit as it stands.
+the fit as it stands, and says it is experimental while doing so.
 
 A marker is left on the exact beat the given moment falls on, not rounded onto a whole one. Rounding
 would move the change by up to half a beat, which is the same species of tidying that made the
 tempo wrong to begin with — snapping an estimate of 128.199 to 128.000 costs 0.7 beats of drift
 across a three-minute song.
+
+Looking at it rather than reading it
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:py:func:`~smlab.warp.image.write_drift` lays the song out in eight-second rows with a line on
+every beat, which settles in a glance what a column of figures argues about: a grid that is right
+sits on the attacks the whole way down, and one that is wrong walks off them somewhere you can
+point at. The grid is drawn *before* the waveform, so the lines never hide the attacks they are
+supposed to be judged against, and the audio is coloured by how much low end it carries, because a
+kick is what a beat is usually pinned to and it should be findable without squinting.
+
+Two details are load-bearing. Beats before beat zero are drawn too: an offset of a few seconds is
+ordinary, and a blank intro reads as the grid starting late rather than as there being nothing to
+draw. And every pixel column covers exactly its own share of the row rather than a whole number of
+samples, because the dropped remainder narrows the waveform against the slot the grid occupies and
+the two slide apart by about twenty milliseconds by the right edge — the same size as the error the
+picture exists to show. Checked against a click track with known beats, the lines land within two
+milliseconds and the waveform correlates with the audio at a shift of one column.
 
 Offset
 ------
@@ -134,6 +158,21 @@ exactly as much: the network cannot memorise that downbeats tend to land at a pa
 every window of every song teaches it something about every phase. That equivariance is the whole
 design, not an optimisation — were it merely approximate, the model could learn an artefact of how
 offsets happen to be authored rather than anything audible.
+
+The drift picture cannot use that model, because it has to work with no weights downloaded, so it
+places its grid by asking which phase gathers the most onset strength onto the beat. That is not
+the obvious method either: the argument of the envelope's Fourier coefficient at the beat frequency
+is one line of arithmetic and it is a weighted average over everything ringing, so a long decay or a
+busy off-beat drags it off the attacks and it lands late. On a track whose beat sits at 3.3618 s,
+gathering scores the true phase at 1.000 against 0.688 for a phase a third of a beat away, and
+lands within five milliseconds of it; the averaging method was a third of a beat out. Every phase
+within the window of the right one scores about the same, so the winner is then re-placed at the
+mean of the attacks it gathered, which is both finer than one frame and not stuck at the edge of a
+plateau.
+
+That is still worth overriding when the answer is known. ``smlab drift --offset`` takes it, in the
+same sign convention as the tag, and the tool prints back where it put beat zero so it can be
+checked against a figure rather than against pixels.
 
 Sign conventions
 ----------------

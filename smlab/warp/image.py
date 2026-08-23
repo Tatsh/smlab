@@ -125,9 +125,9 @@ def _origin(envelope: NDArray[np.float64], frame_rate: float, period: float) -> 
     # Every phase within the window of the right one scores about the same, so the best of them is
     # picked off a flat top and can sit at either edge of it. Averaging the attacks that phase
     # actually gathered puts it in the middle of them, and finer than one frame.
+    # Something is always caught: the phase that scored highest scored above nothing, which it
+    # could not have done without gathering some strength.
     on = caught[:, coarse] & (weight > 0.0)
-    if not on.any():
-        return float(candidates[coarse])
     turns = (times[on] - candidates[coarse]) / period * 2.0 * np.pi
     middle = complex(np.sum(weight[on] * np.exp(1j * turns)) / np.sum(weight[on]))
     return float((candidates[coarse] + np.angle(middle) / (2.0 * np.pi) * period) % period)
@@ -192,8 +192,6 @@ def _draw_row(
         first = int(column * len(block) / columns)
         last = max(int((column + 1) * len(block) / columns), first + 1)
         piece = block[first:last]
-        if not len(piece):
-            break
         peak = float(np.abs(piece).max())
         share = min(float(np.abs(low[first:last]).max()) / (peak + 1e-9), 1.0)
         colour = tuple(
