@@ -15,7 +15,6 @@ smlab
    do — is applied afterwards, as rules measured off the corpus.
 
 .. toctree::
-   :caption: Command reference
    :maxdepth: 2
 
    cli
@@ -30,13 +29,11 @@ smlab
       usage
 
    .. toctree::
-      :caption: How it works
       :maxdepth: 2
 
       design/index
 
    .. toctree::
-      :caption: API reference
       :maxdepth: 2
 
       api/index
