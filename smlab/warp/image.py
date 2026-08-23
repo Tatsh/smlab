@@ -54,9 +54,15 @@ _BAR = (120, 150, 226)
 _SPLICE = (224, 138, 32)
 
 
-def _beat_times(warps: Sequence[Warp], origin: float, duration: float) -> Iterator[float]:
+def _beat_times(
+    warps: Sequence[Warp], origin: float, duration: float
+) -> Iterator[tuple[int, float]]:
     """
     Walk out the moment of every beat, following each tempo in turn.
+
+    Beats before beat zero are walked out too. An offset of a few seconds is ordinary, and stopping
+    at beat zero would leave the whole intro with no grid over it, which reads as the grid starting
+    late rather than as there being nothing to draw.
 
     Parameters
     ----------
@@ -69,17 +75,17 @@ def _beat_times(warps: Sequence[Warp], origin: float, duration: float) -> Iterat
 
     Yields
     ------
-    float
-        The time of each beat, in seconds.
+    tuple[int, float]
+        Which beat it is, counting from zero at the offset and going negative before it, and when
+        it happens in seconds.
     """
-    at, index = origin, 0
+    opening = 60.0 / warps[0].bpm
+    index = -int(np.ceil(origin / opening))
+    at = origin + index * opening
     while at < duration:
-        yield at
+        yield index, at
         index += 1
-        tempo = next(
-            (warp.bpm for warp in reversed(warps) if warp.seconds <= at),
-            warps[0].bpm if warps else 0,
-        )
+        tempo = next((warp.bpm for warp in reversed(warps) if warp.seconds <= at), warps[0].bpm)
         at += 60.0 / tempo
 
 
@@ -127,7 +133,10 @@ def _bass(samples: NDArray[np.float64], rate: int) -> NDArray[np.float64]:
     """
     width = max(int(rate / 400), 1)
     running = np.cumsum(np.concatenate([[0.0], samples]))
-    return (running[width:] - running[:-width]) / width
+    averaged = (running[width:] - running[:-width]) / width
+    # A running mean is shorter than what it averages, and the tail has to keep lining up with the
+    # audio it colours, so the missing end is held rather than left off.
+    return np.concatenate([averaged, np.full(len(samples) - len(averaged), averaged[-1])])
 
 
 def _draw_row(
@@ -156,16 +165,19 @@ def _draw_row(
     loudest : float
         Loudest sample anywhere in the song, so every row is drawn to the same scale.
     """
-    per = max(len(block) // columns, 1)
+    # Each column has to cover exactly its own share of the row. Giving every column the same whole
+    # number of samples looks equivalent and is not: the remainder is dropped, so the waveform ends
+    # up drawn slightly narrower than the slot the grid is drawn in, and the two slide apart by tens
+    # of milliseconds by the right edge, which is the very error the picture exists to show.
     middle = top + _ROW / 2.0
-    for column in range(min(columns, len(block) // per)):
-        piece = block[column * per : (column + 1) * per]
+    for column in range(columns):
+        first = int(column * len(block) / columns)
+        last = max(int((column + 1) * len(block) / columns), first + 1)
+        piece = block[first:last]
         if not len(piece):
             break
         peak = float(np.abs(piece).max())
-        share = min(
-            float(np.abs(low[column * per : (column + 1) * per]).max()) / (peak + 1e-9), 1.0
-        )
+        share = min(float(np.abs(low[first:last]).max()) / (peak + 1e-9), 1.0)
         colour = tuple(
             round(pale + (deep - pale) * share) for pale, deep in zip(_WAVEFORM, _KICK, strict=True)
         )
@@ -181,7 +193,7 @@ def write_drift(
     *,
     origin: float | None = None,
     row_seconds: float = DEFAULT_ROW_SECONDS,
-) -> None:
+) -> float:
     """
     Draw the audio in rows with a line on every beat.
 
@@ -201,6 +213,11 @@ def write_drift(
         attack it belongs to rather than on it.
     row_seconds : float
         Seconds of audio on each row.
+
+    Returns
+    -------
+    float
+        When beat zero was put, in seconds.
     """
     rate = PHASE_PARAMS.sample_rate
     samples = load_audio(audio, sample_rate=rate)
@@ -233,7 +250,7 @@ def write_drift(
         draw.text((8, top + _ROW / 2 - 6), f'{start:.0f}s', fill=_INK)
         # The grid goes down before the waveform so the lines never hide the attacks they are there
         # to be judged against.
-        for index, at in enumerate(beats):
+        for index, at in beats:
             if not start <= at < start + row_seconds:
                 continue
             x = _LEFT + (at - start) / row_seconds * columns
@@ -250,3 +267,4 @@ def write_drift(
                 x = _LEFT + (at - start) / row_seconds * columns
                 draw.line([(x, top), (x, top + _ROW)], fill=_SPLICE, width=3)
     canvas.save(destination)
+    return origin

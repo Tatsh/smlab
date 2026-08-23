@@ -1086,8 +1086,11 @@ def drift_command(
     fit = fit_warps(audio, bpm, tolerance=slip)
     _report_splices(fit.splices)
     if image is not None:
-        write_drift(image, audio, bpm, fit, origin=None if offset is None else -offset)
-        click.echo(f'Wrote the beat against the grid to {image}.')
+        origin = write_drift(image, audio, bpm, fit, origin=None if offset is None else -offset)
+        click.echo(
+            f'Wrote the beat against the grid to {image}, with beat 0 at {origin:.4f} s '
+            f'(offset {-origin:+.4f}) and a beat every {60.0 / fit.warps[0].bpm:.4f} s.'
+        )
     if len(fit.warps) <= 1:
         settled = fit.warps[0].bpm if fit.warps else sum(tempi) / len(tempi)
         click.echo(f'Steady enough for one tempo of {settled:.3f} BPM.')
