@@ -143,10 +143,18 @@ still loads and plays, merely off-beat forever.
 | `#OFFSET` (`.sm`/`.ssc`) | Beat 0 occurs at `-OFFSET` seconds into the audio.          |
 | `#GAP` (`.dwi`)          | Whole milliseconds until beat 0, so `OFFSET = -GAP / 1000`. |
 
-Tempo changes are not detected, but they can be stated. `smlab drift song.mp3` measures how far the
-tempo wanders across a song and prints where a marker belongs; `--warp SECONDS:BPM` on `generate`
-places one, repeatably. That is the Ableton warp workflow: the tool shows the drift, you place the
-markers. Freezes are not inserted.
+A song whose tempo moves needs more than one `#BPMS` entry. `smlab drift song.mp3` measures the
+wander and prints the whole set of tempo segments needed to hold the grid on the music, as a command
+line to paste back; `--warp SECONDS:BPM` on `generate` places one marker, repeatably, and `--warp`
+with no value fits them for you. That is the Ableton warp workflow: the tool shows the drift, you
+decide what to do about it. Freezes are not inserted.
+
+Fitting is deliberately reluctant, because where a beat is _measured_ depends on what is playing:
+percussion entering shifts the measured phase without moving the beat, so even audio rendered at a
+mathematically exact tempo can look like it warps. A boundary therefore has to shift the grid by
+more than the tolerance, and a tempo that departs and comes straight back is treated as an artefact
+rather than as music. An abrupt change is located only to within about six seconds, and nothing in
+the first six seconds can be placed at all.
 
 ## Retraining
 

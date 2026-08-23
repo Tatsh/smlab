@@ -51,7 +51,7 @@ from .train import (
     train_offset_model,
 )
 from .vocab import Vocabulary, build_vocabulary
-from .warp import measure_tempo
+from .warp import DEFAULT_TOLERANCE, Warp, fit_warps, measure_tempo
 from .weights import (
     CHART_WEIGHTS,
     DEFAULT_REPOSITORY,
@@ -160,7 +160,14 @@ def default_meter(difficulty: str, scale: int = DEFAULT_SCALE) -> int:
     return min(ratings, key=lambda rating: abs(target_nps(rating, scale) - wanted))
 
 
-class _WarpSpec(click.ParamType[tuple[float, float]]):
+_FIT_WARPS = 'auto'
+"""What ``--warp`` stands for when it is given without a value.
+
+:meta hide-value:
+"""
+
+
+class _WarpSpec(click.ParamType['Warp | None']):
     """A tempo change, as the second it happens on and the tempo it changes to."""
 
     name = 'warp'
@@ -168,9 +175,9 @@ class _WarpSpec(click.ParamType[tuple[float, float]]):
     @override
     def convert(
         self, value: str, param: click.Parameter | None, ctx: click.Context | None
-    ) -> tuple[float, float]:
+    ) -> Warp | None:
         """
-        Parse one ``SECONDS:BPM`` argument.
+        Parse one ``SECONDS:BPM`` argument, or the bare option asking for the changes to be found.
 
         Parameters
         ----------
@@ -183,9 +190,12 @@ class _WarpSpec(click.ParamType[tuple[float, float]]):
 
         Returns
         -------
-        tuple[float, float]
-            When the change happens, in seconds, and the tempo from then on.
+        Warp or None
+            The tempo change, or ``None`` when the option was given without a value and the changes
+            are to be fitted instead.
         """
+        if value == _FIT_WARPS:
+            return None
         seconds, _, tempo = value.partition(':')
         try:
             when, bpm = float(seconds), float(tempo)
@@ -193,7 +203,7 @@ class _WarpSpec(click.ParamType[tuple[float, float]]):
             self.fail(f'{value!r} is not SECONDS:BPM.', param, ctx)
         if when < 0 or bpm <= 0:
             self.fail(f'{value!r} needs a time of zero or more and a tempo above zero.', param, ctx)
-        return when, bpm
+        return Warp(seconds=when, bpm=bpm)
 
 
 class _DifficultySpec(click.ParamType[tuple[str, int]]):
@@ -265,7 +275,8 @@ def _resolve_timing(
     shift_beats: float,
     latency: float,
     multiply: float,
-    warps: tuple[tuple[float, float], ...] = (),
+    warps: tuple[Warp | None, ...] = (),
+    warp_slip: float = DEFAULT_TOLERANCE,
     phase_model: OffsetModel | None = None,
 ) -> TimingData:
     """
@@ -285,8 +296,11 @@ def _resolve_timing(
         Seconds of constant playback latency to compensate.
     multiply : float
         Factor to scale the tempo by, for when detection lands on the wrong octave.
-    warps : tuple[tuple[float, float], ...]
-        Tempo changes, each as the second it happens on and the tempo from then on.
+    warps : tuple[Warp | None, ...]
+        Tempo changes, each as the second it happens on and the tempo from then on. A ``None``
+        entry asks for the changes to be fitted from the audio instead.
+    warp_slip : float
+        Seconds the grid may wander from the music before fitting writes another tempo.
     phase_model : OffsetModel or None
         Model used to place the downbeat, or ``None`` to keep the offset the tempo estimator
         produced.
@@ -331,12 +345,28 @@ def _resolve_timing(
     if shift_beats:
         timing = timing.shifted(shift_beats * 60.0 / timing.primary_bpm)
         click.echo(f'Shifted beat 0 by {shift_beats:+g} beats, offset now {timing.offset:+.4f}.')
-    for seconds, tempo in sorted(warps):
+    placed = tuple(warp for warp in warps if warp is not None)
+    if len(placed) < len(warps):
+        fitted = fit_warps(audio, timing.primary_bpm, tolerance=warp_slip)
+        if len(fitted) <= 1:
+            click.echo(f'Tempo holds within {warp_slip * 1000:.0f} ms, so nothing was warped.')
+        else:
+            click.echo(f'Fitted {len(fitted)} tempo segments within {warp_slip * 1000:.0f} ms.')
+            placed = (*fitted, *placed)
+    for seconds, tempo in sorted(placed):
         # Each marker is placed at the beat the timing built so far puts that moment on, and the
         # beat is left exactly where it lands. Rounding it to a whole beat would move the change by
         # up to half a beat, which is the same kind of tidying that made the tempo wrong to begin
         # with.
-        beat = timing.beat_at_time(seconds)
+        if (beat := timing.beat_at_time(seconds)) <= 0:
+            # Nothing is charted before beat zero, so a marker there is simply the opening tempo.
+            timing = TimingData(
+                bpms=(BPMSegment(0.0, tempo), *timing.bpms[1:]),
+                offset=timing.offset,
+                stops=timing.stops,
+            )
+            click.echo(f'Opening tempo is {tempo:.3f} BPM.')
+            continue
         timing = TimingData(
             bpms=(*timing.bpms, BPMSegment(beat, tempo)), offset=timing.offset, stops=timing.stops
         )
@@ -664,8 +694,17 @@ def _load_chart_model(
     '--warp',
     'warps',
     multiple=True,
+    is_flag=False,
+    flag_value=_FIT_WARPS,
     type=_WarpSpec(),
-    help='Change tempo partway through, as SECONDS:BPM. Repeatable. See the drift command.',
+    help='Change tempo partway through, as SECONDS:BPM. Repeatable. Pass it without a value to '
+    'fit the changes from the audio. See the drift command.',
+)
+@click.option(
+    '--warp-slip',
+    default=DEFAULT_TOLERANCE,
+    help='Seconds the grid may wander from the music before a fitted warp writes another tempo.',
+    show_default=True,
 )
 @click.option(
     '--shift-beats',
@@ -790,7 +829,8 @@ def generate(  # noqa: PLR0917
     bpm: float,
     bpm_multiplier: float,
     offset: float | None,
-    warps: tuple[tuple[float, float], ...],
+    warps: tuple[Warp | None, ...],
+    warp_slip: float,
     shift_beats: float,
     latency: float,
     image: bool,  # noqa: FBT001
@@ -827,6 +867,7 @@ def generate(  # noqa: PLR0917
         latency,
         bpm_multiplier,
         warps,
+        warp_slip,
         _load_offset_model(checkpoints),
     )
     try:
@@ -977,14 +1018,15 @@ def drift_command(audio: Path, bpm: float, slip: float) -> None:
             f'  {reading.seconds:7.1f} s  {reading.bpm:8.3f} BPM  '
             f'slip {reading.slip * 1000:+7.1f} ms{mark}'
         )
-    worst = max(readings, key=lambda reading: abs(reading.slip))
-    if abs(worst.slip) < slip:
-        click.echo(f'Steady enough for one tempo of {sum(tempi) / len(tempi):.3f} BPM.')
-    else:
-        click.echo(
-            f'Worst stretch slips {worst.slip * 1000:+.1f} ms around {worst.seconds:.0f} s. '
-            f'Try --warp {worst.seconds:.0f}:{worst.bpm:.3f}'
-        )
+    if len(fitted := fit_warps(audio, bpm, tolerance=slip)) <= 1:
+        settled = fitted[0].bpm if fitted else sum(tempi) / len(tempi)
+        click.echo(f'Steady enough for one tempo of {settled:.3f} BPM.')
+        return
+    click.echo(f'Holding the grid within {slip * 1000:.0f} ms needs {len(fitted)} tempo segments:')
+    for warp in fitted:
+        click.echo(f'  {warp.seconds:7.1f} s  {warp.bpm:8.3f} BPM')
+    later = ' '.join(f'--warp {warp.seconds:.0f}:{warp.bpm:.3f}' for warp in fitted[1:])
+    click.echo(f'Generate with: --bpm {fitted[0].bpm:.3f} {later}')
 
 
 @main.command('image')

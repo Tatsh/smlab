@@ -50,9 +50,46 @@ that drifts can be charted correctly the moment somebody says where it drifts.
 :py:mod:`smlab.warp` measures that. It tracks the beat phase against a fixed reference tempo, and
 where the music runs faster or slower the tracked phase slides; the slope of the slide is the tempo
 difference and the sign says which way. ``smlab drift`` prints it per stretch along with the slip
-each one accumulates, and ``--warp SECONDS:BPM`` on ``generate`` places a marker. That is the
-division of labour a warp tool actually has: the measurement is reliable, the decision is not, so
-the measurement is automatic and the decision is yours.
+each one accumulates, and ``--warp SECONDS:BPM`` on ``generate`` places a marker.
+
+Choosing the segments
+~~~~~~~~~~~~~~~~~~~~~
+
+A tempo held over a stretch is a straight line in the tracked phase, so the fewest tempi that
+describe a song are the fewest straight pieces the phase can be cut into with none of them straying
+further than a tolerance. Every boundary is chosen at once, by dynamic programming over the
+measurements, and ties on the number of pieces are settled by squared error.
+
+Taking each piece as far as it will go left to right is the obvious alternative and it is wrong. A
+piece runs past the change before the tolerance notices, the next piece then straddles the change,
+and the fit reports a tempo belonging to neither side. On a click track stepping cleanly from 128 to
+130 BPM, the greedy fit invents that bridge; choosing the boundaries jointly does not.
+
+What a tempo segment must not be used for
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A segment can only say the beat spacing changed. That makes it the wrong instrument for a *step* in
+the measured phase, and steps are common: where the beat appears to sit depends on what is playing,
+so an arrangement change moves the measurement without moving the beat. Rendered audio at a
+mathematically constant tempo demonstrates it. A click track with off-beat percussion entering
+half-way through reports a spurious excursion of 0.8 BPM at exactly that moment under a naive fit,
+and the same track without the entry reports one tempo to three decimal places.
+
+Two rules keep those out. A boundary must move the grid by more than the tolerance across the
+shorter of the two stretches it separates, so a boundary that exists only to absorb a step, whose
+two sides differ by a few hundredths of a beat per minute, is dropped. Where the step is large
+enough to survive that, the shape gives it away: the tempo departs and returns. Real tempo changes
+do not undo themselves, so a tempo excursion that comes back to where it started is joined up. What
+remains is deliberately conservative — a phase step is left uncorrected, because no tempo marker can
+correct one.
+
+Segments joined this way take the middle tempo of their pieces by duration rather than a line
+refitted across the whole group, since a line drawn through a step comes out tilted and would
+reintroduce the error that was just removed.
+
+That is the division of labour a warp tool actually has: the measurement is reliable, the decision
+is not, so the measurement is automatic and the decision is yours. ``--warp`` with no value accepts
+the fit as it stands.
 
 A marker is left on the exact beat the given moment falls on, not rounded onto a whole one. Rounding
 would move the change by up to half a beat, which is the same species of tidying that made the

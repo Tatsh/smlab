@@ -9,13 +9,14 @@ import pytest
 import soundfile as sf  # type: ignore[import-untyped]  # No stubs are published.
 
 from smlab.tempo import PHASE_PARAMS
-from smlab.warp import measure_tempo
+from smlab.warp import fit_warps, measure_tempo
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 _RATE = PHASE_PARAMS.sample_rate
 _FINE = {'window': 4.0, 'hop': 1.0, 'span': 10.0}
+_FIT = {'window': 8.0, 'hop': 1.0, 'shortest': 20.0}
 
 
 def _clicks(path: Path, tempi: tuple[tuple[float, float], ...]) -> Path:
@@ -71,3 +72,50 @@ def test_silence_reads_nothing(tmp_path: Path) -> None:
     # Every window is flat, so no window has a phase to give.
     sf.write(tmp_path / 'silent.wav', np.zeros(int(_RATE * 40), dtype=np.float32), _RATE)
     assert measure_tempo(tmp_path / 'silent.wav', 128.0, **_FINE) == []
+
+
+def test_one_tempo_is_fitted_to_a_song_that_holds_one(tmp_path: Path) -> None:
+    path = _clicks(tmp_path / 'steady.wav', ((128.0, 120.0),))
+    fitted = fit_warps(path, 128.0, **_FIT)
+    assert [warp.seconds for warp in fitted] == [0.0]
+    assert fitted[0].bpm == pytest.approx(128.0, abs=0.05)
+
+
+def test_a_song_that_changes_tempo_is_fitted_a_segment_for_each(tmp_path: Path) -> None:
+    path = _clicks(tmp_path / 'changing.wav', ((128.0, 60.0), (136.0, 60.0)))
+    fitted = fit_warps(path, 128.0, **_FIT)
+    assert len(fitted) > 1
+    assert fitted[0].seconds == pytest.approx(0.0, abs=1e-12)
+    assert fitted[0].bpm < fitted[-1].bpm
+    assert fitted[-1].bpm == pytest.approx(136.0, abs=0.5)
+
+
+def test_a_change_of_instruments_alone_is_not_read_as_a_change_of_tempo(tmp_path: Path) -> None:
+    # Off-beat hits entering part way through move where the beat is measured without moving the
+    # beat. That is a step in the phase rather than a change of slope, and writing it as a tempo
+    # would put a tempo in the chart the song never plays.
+    step = int(_RATE * 60.0 / 128.0)
+    track = np.zeros(int(_RATE * 120.0), dtype=np.float32)
+    track[::step] = 1.0
+    track[step // 2 + len(track) // 2 :: step] = 0.7
+    sf.write(path := tmp_path / 'rearranged.wav', track, _RATE)
+    fitted = fit_warps(path, 128.0, **_FIT)
+    assert [warp.seconds for warp in fitted] == [0.0]
+    assert fitted[0].bpm == pytest.approx(128.0, abs=0.1)
+
+
+def test_a_song_that_slips_once_but_keeps_its_tempo_is_still_one_tempo(tmp_path: Path) -> None:
+    # A splice moves every beat after it by the same amount without changing the spacing between
+    # them. Both halves hold the same tempo, so there is nothing for a tempo marker to say.
+    step = int(_RATE * 60.0 / 128.0)
+    track = np.zeros(int(_RATE * 120.0), dtype=np.float32)
+    track[: _RATE * 60 : step] = 1.0
+    track[_RATE * 60 + int(_RATE * 0.06) :: step] = 1.0
+    sf.write(path := tmp_path / 'spliced.wav', track, _RATE)
+    fitted = fit_warps(path, 128.0, **_FIT)
+    assert [warp.seconds for warp in fitted] == [0.0]
+    assert fitted[0].bpm == pytest.approx(128.0, abs=0.1)
+
+
+def test_a_song_too_short_to_fit_a_segment_is_fitted_nothing(tmp_path: Path) -> None:
+    assert fit_warps(_clicks(tmp_path / 'brief.wav', ((128.0, 6.0),)), 128.0, **_FIT) == []

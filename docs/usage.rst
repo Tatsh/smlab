@@ -57,19 +57,52 @@ and drifts. ``smlab drift`` measures it.
 
    smlab drift song.mp3 --bpm 128.199
 
-It prints the tempo over each stretch of the song and how much the grid gains or loses across that
-stretch, marking the ones worth a warp marker. Then place them:
+It prints the tempo over each stretch of the song, how much the grid gains or loses across that
+stretch, and then the whole set of tempo segments needed to hold the grid on the music, as a command
+line to paste back:
 
-.. code-block:: shell
+.. code-block:: text
 
-   smlab generate song.mp3 --bpm 128.199 --warp 135:127.909 -o /path/to/Pack
+   Holding the grid within 20 ms needs 4 tempo segments:
+         0.0 s   128.338 BPM
+        98.0 s   128.008 BPM
+       148.0 s   128.808 BPM
+       174.0 s   128.561 BPM
+   Generate with: --bpm 128.338 --warp 98:128.008 --warp 148:128.808 --warp 174:128.561
+
+``--slip`` sets how far the grid may wander before another segment is written. Raising it asks for
+fewer segments.
 
 ``--warp`` is repeatable and takes ``SECONDS:BPM``, the second the change happens on and the tempo
 from then on. Markers land on the exact beat that moment falls on; they are not rounded onto a whole
 beat, because that would move the change by up to half a beat.
 
-Nothing detects tempo changes for you. The measurement is dependable and the decision is not, so the
-decision stays with you — which is how a warp tool is meant to work.
+Given ``--warp`` with no value, ``generate`` fits the segments itself and applies them, which is the
+same fit ``drift`` prints:
+
+.. code-block:: shell
+
+   smlab generate song.mp3 --bpm 128.199 --warp --warp-slip 0.020 -o /path/to/Pack
+
+What it will and will not find
+------------------------------
+
+Tempo is read from how the beat phase slides against a fixed reference, so a segment boundary means
+the slide changed slope. Two things follow, and both matter when reading the output.
+
+Music rendered at a mathematically exact tempo can still appear to warp. Where the beat is *measured*
+depends on what is playing: when off-beat percussion enters, the measured phase steps sideways
+without the beat moving at all. A step is not a slope, so a tempo marker is the wrong instrument for
+it, and one written there would put a tempo in the chart the song never plays. Two rules suppress it
+— a boundary must move the grid by more than the tolerance over the shorter stretch it separates,
+and a tempo that departs from its neighbour and comes straight back is treated as a step rather than
+as music, since real tempo changes do not undo themselves.
+
+An abrupt tempo change is found, but its position is only good to about half of the twelve-second
+analysis window, and a short segment holding an in-between tempo is usually left across the join.
+Nothing before the first six seconds can be placed at all, as no measurement is centred earlier;
+whatever happens there is folded into the opening tempo. When the exact figures are known, state
+them with ``--warp`` rather than fitting them.
 
 Difficulty and rating scales
 ----------------------------
