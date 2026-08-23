@@ -144,6 +144,8 @@ lextudio
 libera
 librosa
 libsonnet
+linalg
+lstsq
 linters
 lּkz
 lnڼwz
@@ -232,8 +234,10 @@ qhϼs
 qtٻl
 radarvalues
 randn
+rcond
 recurrentq
 regen
+Reweighting
 repeatably
 retap
 retapped

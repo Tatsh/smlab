@@ -65,6 +65,25 @@ piece runs past the change before the tolerance notices, the next piece then str
 and the fit reports a tempo belonging to neither side. On a click track stepping cleanly from 128 to
 130 BPM, the greedy fit invents that bridge; choosing the boundaries jointly does not.
 
+The tempi are then read off a single line that bends at those boundaries, not off each piece
+separately. This is the part that matters most and the part that is easiest to get wrong. Pieces
+fitted independently each choose their own starting height, so every boundary quietly carries a
+jump in phase, and a tempo cannot jump. Writing those tempi into a file puts the grid out by the
+sum of the jumps: measured on a song whose beat wanders by tens of milliseconds, the independent
+fit accumulated 234 ms of error by the end, which is worse than writing no tempo change at all.
+Bending one continuous line makes the fitted phase and the phase the chart will really have the
+same object, and the same song then lands within 43 ms throughout.
+
+Least squares is used for that line despite the tolerance being a worst-case quantity. Reweighting
+towards the furthest-out measurements, to chase the smallest worst miss instead, was implemented
+and measured: it made every case worse, because the weights collapse onto a handful of points. The
+squared fit does lean about a tenth of a beat per minute into a phase step, which is the price of
+being stable everywhere else.
+
+What is left over after all of that is reported. A grid that still misses by more than the
+tolerance is saying that the beat moves in ways no tempo describes, and no arrangement of warps
+will recover it.
+
 What a tempo segment must not be used for
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

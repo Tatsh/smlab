@@ -149,7 +149,13 @@ line to paste back; `--warp SECONDS:BPM` on `generate` places one marker, repeat
 with no value fits them for you. That is the Ableton warp workflow: the tool shows the drift, you
 decide what to do about it. Freezes are not inserted.
 
-Fitting is deliberately reluctant, because where a beat is _measured_ depends on what is playing:
+`smlab drift song.mp3 --image beats.png` draws the whole song in rows with the grid over it, bars
+numbered and beats ticked, so drift is visible rather than argued about. Pass `--offset` when you
+know where beat zero is; the automatic answer is read from an onset envelope, which peaks after the
+attack rather than on it.
+
+Warping is experimental. Fitting is deliberately reluctant, because where a beat is _measured_
+depends on what is playing:
 percussion entering shifts the measured phase without moving the beat, so even audio rendered at a
 mathematically exact tempo can look like it warps. A boundary therefore has to shift the grid by
 more than the tolerance, and a tempo that departs and comes straight back is treated as an artefact

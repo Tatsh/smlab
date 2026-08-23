@@ -28,7 +28,7 @@ from smlab.simfile import load_simfile
 from smlab.stems import STEM_NAMES, SeparationError
 from smlab.timing import TimingData
 from smlab.vocab import Vocabulary, encode_row
-from smlab.warp import TempoReading, Warp
+from smlab.warp import TempoReading, Warp, WarpFit
 from smlab.weights import CHART_WEIGHTS, OFFSET_WEIGHTS, REPOSITORY_VARIABLE
 
 if TYPE_CHECKING:
@@ -400,7 +400,9 @@ def test_a_bare_warp_fits_the_tempo_changes_itself(
     # is the tempo the song opens at rather than a marker part way through it.
     fit = mocker.patch(
         'smlab.main.fit_warps',
-        return_value=[Warp(seconds=0.0, bpm=_BPM), Warp(seconds=2.0, bpm=151.5)],
+        return_value=WarpFit(
+            warps=[Warp(seconds=0.0, bpm=_BPM), Warp(seconds=2.0, bpm=151.5)], splices=[]
+        ),
     )
     result = runner.invoke(
         main,
@@ -439,7 +441,10 @@ def test_a_bare_warp_fits_the_tempo_changes_itself(
 def test_a_bare_warp_leaves_a_steady_song_alone(
     runner: CliRunner, tmp_path: Path, mocker: MockerFixture
 ) -> None:
-    mocker.patch('smlab.main.fit_warps', return_value=[Warp(seconds=0.0, bpm=_BPM)])
+    mocker.patch(
+        'smlab.main.fit_warps',
+        return_value=WarpFit(warps=[Warp(seconds=0.0, bpm=_BPM)], splices=[]),
+    )
     result = runner.invoke(
         main,
         [
@@ -523,11 +528,14 @@ def test_drift_reports_every_place_a_song_wanders(
     )
     mocker.patch(
         'smlab.main.fit_warps',
-        return_value=[
-            Warp(seconds=0.0, bpm=128.0),
-            Warp(seconds=60.0, bpm=127.5),
-            Warp(seconds=90.0, bpm=129.25),
-        ],
+        return_value=WarpFit(
+            warps=[
+                Warp(seconds=0.0, bpm=128.0),
+                Warp(seconds=60.0, bpm=127.5),
+                Warp(seconds=90.0, bpm=129.25),
+            ],
+            splices=[],
+        ),
     )
     result = runner.invoke(main, ['drift', str(_audio(tmp_path / 'song.wav')), '--bpm', '128'])
     assert result.exit_code == 0, result.output
@@ -537,6 +545,58 @@ def test_drift_reports_every_place_a_song_wanders(
     assert 'Generate with: --bpm 128.000 --warp 60:127.500 --warp 90:129.250' in result.output
 
 
+def test_drift_says_when_the_beat_jumps_rather_than_changing_speed(
+    runner: CliRunner, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    # An edit in the audio is not a tempo change and no warp will repair it, so it has to be called
+    # out rather than quietly fitted around.
+    mocker.patch(
+        'smlab.main.measure_tempo',
+        return_value=[TempoReading(seconds=20.0, bpm=128.0, slip=0.0)],
+    )
+    mocker.patch(
+        'smlab.main.fit_warps',
+        return_value=WarpFit(warps=[Warp(seconds=0.0, bpm=128.0)], splices=[61.5]),
+    )
+    result = runner.invoke(main, ['drift', str(_audio(tmp_path / 'song.wav')), '--bpm', '128'])
+    assert result.exit_code == 0, result.output
+    assert 'The beat jumps at 61.5 s' in result.output
+    assert 'a warp will not put it right' in result.output
+
+
+@pytest.mark.usefixtures('generation')
+def test_generating_says_when_the_beat_jumps(
+    runner: CliRunner, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    mocker.patch(
+        'smlab.main.fit_warps',
+        return_value=WarpFit(warps=[Warp(seconds=0.0, bpm=_BPM)], splices=[12.0, 34.0]),
+    )
+    result = runner.invoke(
+        main,
+        [
+            'generate',
+            str(_audio(tmp_path / 'song.wav')),
+            '-o',
+            str(tmp_path / 'out'),
+            '-T',
+            'Song',
+            '-c',
+            str(_checkpoints(tmp_path)),
+            '-D',
+            'Easy',
+            '--nps',
+            '2',
+            '--bpm',
+            str(_BPM),
+            '--offset',
+            '0',
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert 'The beat jumps at 12 s, 34 s' in result.output
+
+
 def test_drift_calls_a_steady_song_steady(
     runner: CliRunner, tmp_path: Path, mocker: MockerFixture
 ) -> None:
@@ -544,7 +604,10 @@ def test_drift_calls_a_steady_song_steady(
         'smlab.main.measure_tempo',
         return_value=[TempoReading(seconds=20.0, bpm=128.0, slip=0.001)],
     )
-    mocker.patch('smlab.main.fit_warps', return_value=[Warp(seconds=0.0, bpm=128.0)])
+    mocker.patch(
+        'smlab.main.fit_warps',
+        return_value=WarpFit(warps=[Warp(seconds=0.0, bpm=128.0)], splices=[]),
+    )
     result = runner.invoke(main, ['drift', str(_audio(tmp_path / 'song.wav')), '--bpm', '128'])
     assert result.exit_code == 0, result.output
     assert 'Steady enough for one tempo of 128.000 BPM' in result.output
@@ -561,7 +624,7 @@ def test_drift_falls_back_to_the_average_when_nothing_can_be_fitted(
             TempoReading(seconds=60.0, bpm=127.0, slip=0.0),
         ],
     )
-    mocker.patch('smlab.main.fit_warps', return_value=[])
+    mocker.patch('smlab.main.fit_warps', return_value=WarpFit(warps=[], splices=[]))
     result = runner.invoke(main, ['drift', str(_audio(tmp_path / 'song.wav')), '--bpm', '128'])
     assert result.exit_code == 0, result.output
     assert 'Steady enough for one tempo of 127.500 BPM' in result.output
@@ -577,7 +640,10 @@ def test_drift_detects_a_tempo_when_none_is_given(
         'smlab.main.measure_tempo',
         return_value=[TempoReading(seconds=20.0, bpm=150.0, slip=0.0)],
     )
-    mocker.patch('smlab.main.fit_warps', return_value=[Warp(seconds=0.0, bpm=150.0)])
+    mocker.patch(
+        'smlab.main.fit_warps',
+        return_value=WarpFit(warps=[Warp(seconds=0.0, bpm=150.0)], splices=[]),
+    )
     result = runner.invoke(main, ['drift', str(_audio(tmp_path / 'song.wav'))])
     assert result.exit_code == 0, result.output
     assert 'Measuring against the detected 150.000 BPM' in result.output

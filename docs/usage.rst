@@ -71,7 +71,26 @@ line to paste back:
    Generate with: --bpm 128.338 --warp 98:128.008 --warp 148:128.808 --warp 174:128.561
 
 ``--slip`` sets how far the grid may wander before another segment is written. Raising it asks for
-fewer segments.
+fewer segments. Where the beat *jumps* rather than changing speed, which is what an edit spliced
+into the audio looks like, it says so: no tempo describes a jump and no warp will repair one.
+
+Seeing it instead of reading it
+-------------------------------
+
+.. code-block:: shell
+
+   smlab drift song.mp3 --bpm 128.2 --offset -0.15 --image beats.png
+
+That writes the whole song in eight-second rows with the grid drawn over it: full height blue lines
+and a number on every bar, short grey ticks on the beats between, and the waveform coloured red
+where the low end dominates so the kicks stand out. If the grid is right the lines sit on the
+attacks all the way down; where it is wrong they walk off them, which shows both that it drifts and
+where it begins.
+
+Give it ``--offset`` when you know where beat zero is. The automatic answer comes from an onset
+envelope, and an envelope peaks after the attack it belongs to rather than on it, so it tends to sit
+late. If the grey ticks come at half the rate of the beat you can hear, the tempo is an octave out
+and ``--bpm`` is what fixes that, not the picture.
 
 ``--warp`` is repeatable and takes ``SECONDS:BPM``, the second the change happens on and the tempo
 from then on. Markers land on the exact beat that moment falls on; they are not rounded onto a whole

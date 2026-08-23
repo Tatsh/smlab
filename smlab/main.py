@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
-from typing import cast, override
+from typing import TYPE_CHECKING, cast, override
 import getpass
 import json
 import logging
@@ -51,7 +51,7 @@ from .train import (
     train_offset_model,
 )
 from .vocab import Vocabulary, build_vocabulary
-from .warp import DEFAULT_TOLERANCE, Warp, fit_warps, measure_tempo
+from .warp import DEFAULT_TOLERANCE, Warp, fit_warps, measure_tempo, write_drift
 from .weights import (
     CHART_WEIGHTS,
     DEFAULT_REPOSITORY,
@@ -63,6 +63,9 @@ from .weights import (
     weights_repository,
 )
 from .writer import Format, SongMetadata, write_song
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 __all__ = (
     'DEFAULT_METERS',
@@ -268,6 +271,47 @@ def _load_offset_model(checkpoints: Path | None) -> OffsetModel | None:
     return model.eval()
 
 
+def _report_splices(splices: Sequence[float]) -> None:
+    """
+    Say where the beat was found to jump, if it was.
+
+    Parameters
+    ----------
+    splices : Sequence[float]
+        Times, in seconds, at which the beat moves without changing speed.
+    """
+    if not splices:
+        return
+    where = ', '.join(f'{at:g} s' for at in splices)
+    click.echo(
+        f'The beat jumps at {where}, which is what an edit in the audio looks like rather than a '
+        f'change of tempo. Timing near those points is unreliable, and a warp will not put it '
+        f'right, because no tempo describes a beat that moves without changing speed.',
+        err=True,
+    )
+
+
+def _report_slack(slack: float, wanted: float) -> None:
+    """
+    Say how far the grid still misses the music by once the tempi have done all they can.
+
+    Parameters
+    ----------
+    slack : float
+        Worst the fitted grid misses by, in seconds.
+    wanted : float
+        How far the grid was asked to stay within, in seconds.
+    """
+    if slack <= wanted:
+        return
+    click.echo(
+        f'Even so the grid still misses by up to {slack * 1000:.0f} ms, against the '
+        f'{wanted * 1000:.0f} ms asked for. The beat moves in ways no tempo describes, so that '
+        f'much is left however the warps are placed.',
+        err=True,
+    )
+
+
 def _resolve_timing(
     audio: Path,
     bpm: float,
@@ -346,13 +390,18 @@ def _resolve_timing(
         timing = timing.shifted(shift_beats * 60.0 / timing.primary_bpm)
         click.echo(f'Shifted beat 0 by {shift_beats:+g} beats, offset now {timing.offset:+.4f}.')
     placed = tuple(warp for warp in warps if warp is not None)
+    # Splices are worth knowing about whether or not anything is being warped, because they say the
+    # detected tempo is describing a beat that jumps, which no amount of tempo is going to fix.
+    fit = fit_warps(audio, timing.primary_bpm, tolerance=warp_slip)
+    _report_splices(fit.splices)
     if len(placed) < len(warps):
-        fitted = fit_warps(audio, timing.primary_bpm, tolerance=warp_slip)
-        if len(fitted) <= 1:
+        click.echo('Warping is experimental. Check the result against the audio.')
+        if len(fit.warps) <= 1:
             click.echo(f'Tempo holds within {warp_slip * 1000:.0f} ms, so nothing was warped.')
         else:
-            click.echo(f'Fitted {len(fitted)} tempo segments within {warp_slip * 1000:.0f} ms.')
-            placed = (*fitted, *placed)
+            click.echo(f'Fitted {len(fit.warps)} tempo segments within {warp_slip * 1000:.0f} ms.')
+            _report_slack(fit.slack, warp_slip)
+            placed = (*fit.warps, *placed)
     for seconds, tempo in sorted(placed):
         # Each marker is placed at the beat the timing built so far puts that moment on, and the
         # beat is left exactly where it lands. Rounding it to a whole beat would move the change by
@@ -697,8 +746,8 @@ def _load_chart_model(
     is_flag=False,
     flag_value=_FIT_WARPS,
     type=_WarpSpec(),
-    help='Change tempo partway through, as SECONDS:BPM. Repeatable. Pass it without a value to '
-    'fit the changes from the audio. See the drift command.',
+    help='Experimental. Change tempo partway through, as SECONDS:BPM. Repeatable. Pass it without '
+    'a value to fit the changes from the audio. See the drift command.',
 )
 @click.option(
     '--warp-slip',
@@ -996,12 +1045,28 @@ def publish(checkpoints: Path, repository: str | None, *, dry_run: bool) -> None
     help='Seconds of gain or loss across a stretch before it is worth a warp marker.',
     show_default=True,
 )
-def drift_command(audio: Path, bpm: float, slip: float) -> None:
+@click.option(
+    '-i',
+    '--image',
+    type=click.Path(dir_okay=False, path_type=Path),
+    help='Also draw the beat against the grid to this PNG.',
+)
+@click.option(
+    '--offset',
+    default=None,
+    type=float,
+    help='Offset to draw the grid from, where beat 0 falls at minus this. Detected when omitted.',
+)
+def drift_command(
+    audio: Path, bpm: float, slip: float, image: Path | None, offset: float | None
+) -> None:
     """
-    Report how a song's tempo wanders, and where a warp marker would go.
+    Report how a song's tempo wanders, and where warp markers would go. Experimental.
 
     A chart is written against one grid, so a song whose tempo moves can only be charted correctly
-    by saying where it moves. Pass what this prints back to `generate` as --warp.
+    by saying where it moves. Pass what this prints back to `generate` as --warp. Where the beat
+    jumps rather than changing speed, which is what an edit in the audio looks like, it says so and
+    no warp will help.
     """  # noqa: DOC501
     if bpm <= 0:
         estimate = estimate_timing(audio)
@@ -1018,15 +1083,24 @@ def drift_command(audio: Path, bpm: float, slip: float) -> None:
             f'  {reading.seconds:7.1f} s  {reading.bpm:8.3f} BPM  '
             f'slip {reading.slip * 1000:+7.1f} ms{mark}'
         )
-    if len(fitted := fit_warps(audio, bpm, tolerance=slip)) <= 1:
-        settled = fitted[0].bpm if fitted else sum(tempi) / len(tempi)
+    fit = fit_warps(audio, bpm, tolerance=slip)
+    _report_splices(fit.splices)
+    if image is not None:
+        write_drift(image, audio, bpm, fit, origin=None if offset is None else -offset)
+        click.echo(f'Wrote the beat against the grid to {image}.')
+    if len(fit.warps) <= 1:
+        settled = fit.warps[0].bpm if fit.warps else sum(tempi) / len(tempi)
         click.echo(f'Steady enough for one tempo of {settled:.3f} BPM.')
         return
-    click.echo(f'Holding the grid within {slip * 1000:.0f} ms needs {len(fitted)} tempo segments:')
-    for warp in fitted:
+    click.echo(
+        f'Holding the grid within {slip * 1000:.0f} ms needs {len(fit.warps)} tempo segments:'
+    )
+    for warp in fit.warps:
         click.echo(f'  {warp.seconds:7.1f} s  {warp.bpm:8.3f} BPM')
-    later = ' '.join(f'--warp {warp.seconds:.0f}:{warp.bpm:.3f}' for warp in fitted[1:])
-    click.echo(f'Generate with: --bpm {fitted[0].bpm:.3f} {later}')
+    later = ' '.join(f'--warp {warp.seconds:.0f}:{warp.bpm:.3f}' for warp in fit.warps[1:])
+    click.echo(f'Generate with: --bpm {fit.warps[0].bpm:.3f} {later}')
+    _report_slack(fit.slack, slip)
+    click.echo('Warping is experimental. Listen to the result before trusting it.')
 
 
 @main.command('image')

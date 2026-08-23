@@ -20,10 +20,11 @@ from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 
-from .audio import load_audio, onset_envelope
-from .tempo import PHASE_PARAMS
+from smlab.audio import load_audio, onset_envelope
+from smlab.tempo import PHASE_PARAMS
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from pathlib import Path
 
     from numpy.typing import NDArray
@@ -36,6 +37,7 @@ __all__ = (
     'DEFAULT_WINDOW',
     'TempoReading',
     'Warp',
+    'WarpFit',
     'fit_warps',
     'measure_tempo',
 )
@@ -84,8 +86,11 @@ describe the measurement rather than the music.
 """
 _MIN_FRAMES = 8
 _MIN_READINGS = 2
+_EXCURSION = 2
 _LEAST_COVER = 1e-6
 _MIN_SEGMENT_POINTS = 4
+_MOST_DRIFT = 0.05
+_SEARCH_STEPS = 60
 _UNREACHABLE = (2**30, 0.0)
 
 
@@ -107,6 +112,27 @@ class Warp(NamedTuple):
     """Where the tempo takes effect, in seconds. The first one is always zero."""
     bpm: float
     """Tempo from then on, in beats per minute."""
+
+
+class WarpFit(NamedTuple):
+    """What fitting tempo segments to a song turned up."""
+
+    warps: list[Warp]
+    """Tempo segments in time order, the first always starting at zero seconds."""
+    splices: list[float]
+    """
+    Times, in seconds, where the beat jumps instead of changing speed.
+
+    Nothing a tempo can say describes a jump, so the grid is unreliable around each of these and a
+    warp will not repair it.
+    """
+    slack: float = 0.0
+    """
+    Worst the fitted grid still misses the music by, in seconds.
+
+    This is what is left over after doing the best that tempo segments can do. Larger than the
+    tolerance means the beat moves in ways no tempo describes.
+    """
 
 
 def _window_phase(
@@ -237,6 +263,91 @@ def measure_tempo(
     return readings
 
 
+def _pointless(
+    tempi: Sequence[float], starts: Sequence[float], ends: float, bpm: float, tolerance: float
+) -> tuple[int, float] | None:
+    """
+    Find a bend that is not paying for itself, once the whole line has been fitted at once.
+
+    Fitting every stretch together moves the tempi about, so a bend that looked worthwhile while
+    the stretches were judged separately may turn out to separate two tempi that barely differ.
+
+    Parameters
+    ----------
+    tempi : Sequence[float]
+        Tempo of each stretch, in beats per minute.
+    starts : Sequence[float]
+        When each stretch begins, in seconds.
+    ends : float
+        When the last stretch finishes, in seconds.
+    bpm : float
+        Reference tempo the phase was tracked against.
+    tolerance : float
+        How far the grid may wander from the music, in seconds.
+
+    Returns
+    -------
+    tuple[int, float] or None
+        Which stretch to fold into the one before it and by how little it earned its place, or
+        ``None`` when every bend is worth keeping.
+    """
+    spans = [
+        (starts[index + 1] if index + 1 < len(starts) else ends) - start
+        for index, start in enumerate(starts)
+    ]
+    weakest, slightest = None, 1.0
+    for index in range(1, len(tempi)):
+        needed = tolerance * bpm / max(min(spans[index - 1], spans[index]), _LEAST_COVER)
+        if (share := abs(tempi[index] - tempi[index - 1]) / needed) < slightest:
+            weakest, slightest = (index, share), share
+    return weakest
+
+
+def _continuous(
+    times: NDArray[np.float64], phases: NDArray[np.float64], knots: Sequence[float], bpm: float
+) -> tuple[list[float], float]:
+    """
+    Fit one unbroken line that is allowed to bend at the given moments, and read the tempi off it.
+
+    Fitting each stretch on its own is what the obvious approach does and it does not survive
+    contact with a chart. Independent lines are free to start wherever they like, so each boundary
+    quietly carries a jump, and a tempo cannot jump: writing those tempi into a file puts the grid
+    out by the sum of the jumps, which on a song wandering by tens of milliseconds came to a
+    quarter of a second by the end. Bending one line instead makes the fitted phase and the phase
+    the chart will actually have the same thing.
+
+    Parameters
+    ----------
+    times : :py:class:`~numpy.ndarray`
+        Times of each measurement, in seconds.
+    phases : :py:class:`~numpy.ndarray`
+        Unwrapped phase at each of those times, in seconds.
+    knots : Sequence[float]
+        Moments the line may bend at, in seconds and in order.
+    bpm : float
+        Reference tempo the phase was tracked against.
+
+    Returns
+    -------
+    tuple[list[float], float]
+        One tempo for the opening stretch and one after each bend, and the worst the fitted line
+        misses a measurement by, in seconds.
+    """
+    matrix = np.column_stack([
+        np.ones_like(times),
+        times,
+        *(np.maximum(times - knot, 0.0) for knot in knots),
+    ])
+    # Reweighting this towards whichever measurements are furthest out, to chase the line with the
+    # smallest worst miss rather than the smallest total one, was tried and made every measured
+    # case worse: the weights collapse onto a handful of points and the fit stops being stable.
+    # A squared fit does lean slightly into a step in the phase, reading about a tenth of a beat
+    # per minute that is not there, which is the price of it being well behaved everywhere else.
+    coefficients = np.linalg.lstsq(matrix, phases, rcond=None)[0]
+    worst = float(np.max(np.abs(phases - matrix @ coefficients)))
+    return [bpm * (1.0 - float(slope)) for slope in np.cumsum(coefficients[1:])], worst
+
+
 def _fit_cost(times: NDArray[np.float64], phases: NDArray[np.float64]) -> tuple[float, float]:
     """
     Measure how well one straight line describes a piece of the phase track.
@@ -334,6 +445,60 @@ def _tempo(
     return bpm * (1.0 - float(np.polyfit(times[lo:hi], phases[lo:hi], 1)[0]))
 
 
+def _spread(times: NDArray[np.float64], phases: NDArray[np.float64], slope: float) -> float:
+    """
+    Return how far apart the extremes sit once a given drift is taken out.
+
+    Parameters
+    ----------
+    times : :py:class:`~numpy.ndarray`
+        Times of each measurement, in seconds.
+    phases : :py:class:`~numpy.ndarray`
+        Unwrapped phase at each of those times, in seconds.
+    slope : float
+        Drift to remove, as seconds of phase per second of song.
+
+    Returns
+    -------
+    float
+        Difference between the highest and lowest of what is left, in seconds.
+    """
+    left = phases - slope * times
+    return float(left.max() - left.min())
+
+
+def _flattest(times: NDArray[np.float64], phases: NDArray[np.float64]) -> tuple[float, float]:
+    """
+    Find the drift that leaves the phase as level as it can be made.
+
+    The spread left over is convex in the drift, so a ternary search walks straight to the bottom of
+    it. This is the line whose worst departure is smallest, which is the line a grid should follow:
+    a least-squares line trades a smaller total error for a larger worst one, and it is the worst
+    one that is heard.
+
+    Parameters
+    ----------
+    times : :py:class:`~numpy.ndarray`
+        Times of each measurement, in seconds.
+    phases : :py:class:`~numpy.ndarray`
+        Unwrapped phase at each of those times, in seconds.
+
+    Returns
+    -------
+    tuple[float, float]
+        Drift in seconds of phase per second of song, and half the spread left after removing it.
+    """
+    low, high = -_MOST_DRIFT, _MOST_DRIFT
+    for _ in range(_SEARCH_STEPS):
+        first, second = low + (high - low) / 3.0, high - (high - low) / 3.0
+        if _spread(times, phases, first) < _spread(times, phases, second):
+            high = second
+        else:
+            low = first
+    slope = (low + high) / 2.0
+    return slope, _spread(times, phases, slope) / 2.0
+
+
 def _run_tempo(
     times: NDArray[np.float64],
     phases: NDArray[np.float64],
@@ -343,10 +508,13 @@ def _run_tempo(
     """
     Settle on one tempo for a group of pieces that were judged to share it.
 
-    The tempo is the middle one by time rather than a line refitted across the whole group. A group
-    is held together despite a phase step somewhere inside it, and a line drawn through a step comes
-    out tilted, so refitting would read a tempo change off something that never changed tempo.
-    Taking the middle tempo lets the short contaminated piece either side of a step be outvoted.
+    The tempo is the one whose grid strays least at its worst, rather than a least-squares line or
+    the middle of the pieces' own tempi. Both of those answer the wrong question. A least-squares
+    line through a group holding a phase step comes out tilted and reads a tempo change off
+    something that never changed speed. The middle of the pieces' tempi is worse still: a phase that
+    wanders has local slopes that are not tempi at all, and chaining them accumulates an error far
+    larger than the wander that produced them. The worst grid error is what the tolerance is
+    measured in and what a player feels, so it is what the tempo is chosen to minimise.
 
     Parameters
     ----------
@@ -364,11 +532,7 @@ def _run_tempo(
     float
         Tempo for the whole group, in beats per minute.
     """
-    tempi = np.array([_tempo(times, phases, lo, hi, bpm) for lo, hi in run])
-    covers = np.array([float(times[hi - 1] - times[lo]) for lo, hi in run])
-    order = np.argsort(tempi)
-    running = np.cumsum(covers[order])
-    return float(tempi[order][int(np.searchsorted(running, running[-1] / 2.0))])
+    return bpm * (1.0 - _flattest(times[run[0][0] : run[-1][1]], phases[run[0][0] : run[-1][1]])[0])
 
 
 def _weakest_join(
@@ -421,7 +585,7 @@ def _worthwhile(
     bounds: list[tuple[int, int]],
     bpm: float,
     tolerance: float,
-) -> list[list[tuple[int, int]]]:
+) -> tuple[list[list[tuple[int, int]]], list[float]]:
     """
     Group neighbouring pieces whose tempi are too alike for the boundary to be worth writing.
 
@@ -447,10 +611,12 @@ def _worthwhile(
 
     Returns
     -------
-    list[list[tuple[int, int]]]
-        The pieces gathered into the groups that earn a tempo of their own.
+    tuple[list[list[tuple[int, int]]], list[float]]
+        The pieces gathered into the groups that earn a tempo of their own, and the times at which
+        the beat was found to jump rather than to change speed.
     """
     runs = [[piece] for piece in bounds]
+    splices: list[float] = []
     while len(runs) > 1:
         joined = _weakest_join(
             [_run_tempo(times, phases, run, bpm) for run in runs],
@@ -461,12 +627,17 @@ def _worthwhile(
         if joined is None:
             break
         first, last = joined
+        if last - first == _EXCURSION:
+            # The tempo left and came back, so the beat moved without changing speed. Something was
+            # cut into the audio here, and no tempo can describe it.
+            middle = runs[first + 1]
+            splices.append(float(times[middle[0][0]] + times[middle[-1][1] - 1]) / 2.0)
         runs = [
             *runs[:first],
             [piece for run in runs[first : last + 1] for piece in run],
             *runs[last + 1 :],
         ]
-    return runs
+    return runs, sorted(splices)
 
 
 def fit_warps(
@@ -477,7 +648,7 @@ def fit_warps(
     window: float = DEFAULT_WINDOW,
     hop: float = DEFAULT_HOP,
     shortest: float = DEFAULT_SHORTEST,
-) -> list[Warp]:
+) -> WarpFit:
     """
     Work out the fewest tempo segments that keep the grid on the music throughout.
 
@@ -502,10 +673,10 @@ def fit_warps(
 
     Returns
     -------
-    list[Warp]
-        Tempo segments in time order, the first always starting at zero seconds. A single entry
-        means one tempo describes the whole song. Empty when the song is too short or too quiet to
-        track a phase through.
+    WarpFit
+        Tempo segments in time order, the first always starting at zero seconds, and the times the
+        beat was found to jump. A single segment means one tempo describes the whole song. Nothing
+        at all when the song is too short or too quiet to track a phase through.
     """
     envelope = onset_envelope(load_audio(path, sample_rate=PHASE_PARAMS.sample_rate), PHASE_PARAMS)
     centres, phases = _phase_track(
@@ -513,16 +684,16 @@ def fit_warps(
     )
     least = max(int(shortest / hop), _MIN_SEGMENT_POINTS)
     if len(centres) < least:
-        return []
-    runs = _worthwhile(
+        return WarpFit(warps=[], splices=[])
+    runs, splices = _worthwhile(
         centres, phases, _segments(centres, phases, tolerance, least), bpm, tolerance
     )
-    # The first segment sets the tempo the song opens at, and no measurement is centred before half
-    # a window in, so it is pinned to the start rather than to where it was measured.
-    return [
-        Warp(
-            seconds=0.0 if not index else float(centres[run[0][0]]),
-            bpm=_run_tempo(centres, phases, run, bpm),
-        )
-        for index, run in enumerate(runs)
-    ]
+    knots = [float(centres[run[0][0]]) for run in runs[1:]]
+    tempi, worst = _continuous(centres, phases, knots, bpm)
+    while knots and (spare := _pointless(tempi, [0.0, *knots], float(centres[-1]), bpm, tolerance)):
+        knots = [knot for index, knot in enumerate(knots) if index != spare[0] - 1]
+        tempi, worst = _continuous(centres, phases, knots, bpm)
+    # The opening segment sets the tempo the song starts at, and no measurement is centred before
+    # half a window in, so it is pinned to the start rather than to where it was measured.
+    warps = [Warp(seconds=at, bpm=tempo) for at, tempo in zip([0.0, *knots], tempi, strict=True)]
+    return WarpFit(warps=warps, splices=splices, slack=worst)
