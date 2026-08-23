@@ -46,6 +46,31 @@ Two knobs exist for the common failures:
 * ``--latency 0.060`` when every chart is consistently early or late on your setup, since playback
   latency is a property of the machine rather than the song. ``SMLAB_LATENCY`` sets it once.
 
+Songs whose tempo wanders
+-------------------------
+
+A chart is written against one grid, so a song that speeds up or slows down cannot be charted
+correctly by any single tempo: the error accumulates, and what you hear is a chart that starts fine
+and drifts. ``smlab drift`` measures it.
+
+.. code-block:: shell
+
+   smlab drift song.mp3 --bpm 128.199
+
+It prints the tempo over each stretch of the song and how much the grid gains or loses across that
+stretch, marking the ones worth a warp marker. Then place them:
+
+.. code-block:: shell
+
+   smlab generate song.mp3 --bpm 128.199 --warp 135:127.909 -o /path/to/Pack
+
+``--warp`` is repeatable and takes ``SECONDS:BPM``, the second the change happens on and the tempo
+from then on. Markers land on the exact beat that moment falls on; they are not rounded onto a whole
+beat, because that would move the change by up to half a beat.
+
+Nothing detects tempo changes for you. The measurement is dependable and the decision is not, so the
+decision stays with you — which is how a warp tool is meant to work.
+
 Difficulty and rating scales
 ----------------------------
 

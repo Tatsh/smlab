@@ -143,7 +143,10 @@ still loads and plays, merely off-beat forever.
 | `#OFFSET` (`.sm`/`.ssc`) | Beat 0 occurs at `-OFFSET` seconds into the audio.          |
 | `#GAP` (`.dwi`)          | Whole milliseconds until beat 0, so `OFFSET = -GAP / 1000`. |
 
-This tool does _not_ support detecting BPM changes nor does it insert freezes.
+Tempo changes are not detected, but they can be stated. `smlab drift song.mp3` measures how far the
+tempo wanders across a song and prints where a marker belongs; `--warp SECONDS:BPM` on `generate`
+places one, repeatably. That is the Ableton warp workflow: the tool shows the drift, you place the
+markers. Freezes are not inserted.
 
 ## Retraining
 

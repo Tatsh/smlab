@@ -208,6 +208,7 @@ pathlib
 pavelzw
 pipx
 plistlib
+polyfit
 preapproved
 previewvid
 prodvers
@@ -233,6 +234,7 @@ radarvalues
 randn
 recurrentq
 regen
+repeatably
 retap
 retapped
 retapping

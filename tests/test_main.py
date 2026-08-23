@@ -28,6 +28,7 @@ from smlab.simfile import load_simfile
 from smlab.stems import STEM_NAMES, SeparationError
 from smlab.timing import TimingData
 from smlab.vocab import Vocabulary, encode_row
+from smlab.warp import TempoReading
 from smlab.weights import CHART_WEIGHTS, OFFSET_WEIGHTS, REPOSITORY_VARIABLE
 
 if TYPE_CHECKING:
@@ -352,6 +353,136 @@ def test_a_supplied_tempo_reaches_the_offset_estimator(
     assert result.exit_code == 0, result.output
     assert spy.call_args.kwargs['bpm'] == pytest.approx(128.199)
     assert 'Using 128.199 BPM' in result.output
+
+
+@pytest.mark.usefixtures('generation')
+def test_a_warp_writes_a_second_tempo_segment(runner: CliRunner, tmp_path: Path) -> None:
+    # A song whose tempo moves can only be charted correctly by saying where it moves, so the
+    # marker has to reach the file rather than being averaged away into one number.
+    result = runner.invoke(
+        main,
+        [
+            'generate',
+            str(_audio(tmp_path / 'song.wav')),
+            '-o',
+            str(tmp_path / 'out'),
+            '-T',
+            'Song',
+            '-c',
+            str(_checkpoints(tmp_path)),
+            '-D',
+            'Easy',
+            '--nps',
+            '2',
+            '--bpm',
+            str(_BPM),
+            '--offset',
+            '0',
+            '--warp',
+            '2:151.5',
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert 'Warped to 151.500 BPM at 2 s' in result.output
+    timing = load_simfile(tmp_path / 'out' / 'Song' / 'Song.ssc').timing
+    assert timing is not None
+    assert [segment.bpm for segment in timing.bpms] == pytest.approx([_BPM, 151.5])
+    # Two seconds at 150 BPM is five beats, and the marker is left exactly there rather than
+    # rounded onto a beat, which would move it by up to half a beat.
+    assert timing.bpms[1].beat == pytest.approx(5.0, abs=0.01)
+
+
+@pytest.mark.usefixtures('generation')
+def test_a_warp_that_is_not_seconds_and_a_tempo_is_refused(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    result = runner.invoke(
+        main,
+        [
+            'generate',
+            str(_audio(tmp_path / 'song.wav')),
+            '-o',
+            str(tmp_path / 'out'),
+            '-T',
+            'Song',
+            '--warp',
+            'halfway',
+        ],
+    )
+    assert result.exit_code != 0
+    assert 'SECONDS:BPM' in result.output
+
+
+@pytest.mark.usefixtures('generation')
+def test_a_warp_to_a_tempo_of_nothing_is_refused(runner: CliRunner, tmp_path: Path) -> None:
+    result = runner.invoke(
+        main,
+        [
+            'generate',
+            str(_audio(tmp_path / 'song.wav')),
+            '-o',
+            str(tmp_path / 'out'),
+            '-T',
+            'Song',
+            '--warp',
+            '10:0',
+        ],
+    )
+    assert result.exit_code != 0
+    assert 'tempo above zero' in result.output
+
+
+def test_drift_reports_where_a_song_wanders(
+    runner: CliRunner, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    mocker.patch(
+        'smlab.main.measure_tempo',
+        return_value=[
+            TempoReading(seconds=20.0, bpm=128.0, slip=0.001),
+            TempoReading(seconds=60.0, bpm=127.5, slip=0.085),
+        ],
+    )
+    result = runner.invoke(main, ['drift', str(_audio(tmp_path / 'song.wav')), '--bpm', '128'])
+    assert result.exit_code == 0, result.output
+    assert '127.500 to 128.000 BPM' in result.output
+    assert '<- warp' in result.output
+    assert '--warp 60:127.500' in result.output
+
+
+def test_drift_calls_a_steady_song_steady(
+    runner: CliRunner, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    mocker.patch(
+        'smlab.main.measure_tempo',
+        return_value=[TempoReading(seconds=20.0, bpm=128.0, slip=0.001)],
+    )
+    result = runner.invoke(main, ['drift', str(_audio(tmp_path / 'song.wav')), '--bpm', '128'])
+    assert result.exit_code == 0, result.output
+    assert 'Steady enough for one tempo of 128.000 BPM' in result.output
+
+
+def test_drift_detects_a_tempo_when_none_is_given(
+    runner: CliRunner, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    mocker.patch(
+        'smlab.main.estimate_timing', return_value={'bpm': 150.0, 'confidence': 1.0, 'offset': 0.0}
+    )
+    mocker.patch(
+        'smlab.main.measure_tempo',
+        return_value=[TempoReading(seconds=20.0, bpm=150.0, slip=0.0)],
+    )
+    result = runner.invoke(main, ['drift', str(_audio(tmp_path / 'song.wav'))])
+    assert result.exit_code == 0, result.output
+    assert 'Measuring against the detected 150.000 BPM' in result.output
+
+
+def test_drift_gives_up_on_a_song_it_cannot_track(
+    runner: CliRunner, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    mocker.patch('smlab.main.measure_tempo', return_value=[])
+    result = runner.invoke(main, ['drift', str(_audio(tmp_path / 'song.wav')), '--bpm', '128'])
+    assert result.exit_code != 0
+    assert 'too short or too quiet' in result.output
 
 
 @pytest.mark.usefixtures('generation')

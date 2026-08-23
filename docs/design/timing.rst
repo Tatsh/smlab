@@ -26,10 +26,10 @@ Over two held-out halves that stage fixed no song and broke fourteen, dropping a
 to 84.3 per cent. With nothing left to gain it could only wander off a tempo that was already
 right, so it was removed.
 
-One tempo per song
-------------------
+One tempo per song, unless you say otherwise
+--------------------------------------------
 
-Lifting the constant-tempo assumption was attempted and did not survive measurement. Of 3842 corpus
+Detecting tempo changes automatically was attempted and did not survive measurement. Of 3842 corpus
 songs, 60 per cent declare one tempo and a further 17 per cent declare several within five per cent
 of each other, which is an author correcting drift rather than the music changing.
 
@@ -42,6 +42,22 @@ extras in 5.3 per cent of cases and returns a *partial* answer in 84.
 A partial answer is the worst outcome available. A chart pinned to one wrong tempo drifts
 predictably and ``--bpm`` fixes it; a chart whose grid is right for two minutes and wrong for one
 cannot be corrected by any single number.
+
+What failed there was the guessing, not the representation. :py:class:`~smlab.timing.TimingData` has
+always been segment-based, and the writers have always emitted multi-segment ``#BPMS``, so a song
+that drifts can be charted correctly the moment somebody says where it drifts.
+
+:py:mod:`smlab.warp` measures that. It tracks the beat phase against a fixed reference tempo, and
+where the music runs faster or slower the tracked phase slides; the slope of the slide is the tempo
+difference and the sign says which way. ``smlab drift`` prints it per stretch along with the slip
+each one accumulates, and ``--warp SECONDS:BPM`` on ``generate`` places a marker. That is the
+division of labour a warp tool actually has: the measurement is reliable, the decision is not, so
+the measurement is automatic and the decision is yours.
+
+A marker is left on the exact beat the given moment falls on, not rounded onto a whole one. Rounding
+would move the change by up to half a beat, which is the same species of tidying that made the
+tempo wrong to begin with — snapping an estimate of 128.199 to 128.000 costs 0.7 beats of drift
+across a three-minute song.
 
 Offset
 ------

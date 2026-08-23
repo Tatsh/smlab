@@ -13,6 +13,12 @@ Tempo estimation
 .. automodule:: smlab.tempo
    :members:
 
+Tempo drift
+-----------
+
+.. automodule:: smlab.warp
+   :members:
+
 What a chart demands of a player
 --------------------------------
 

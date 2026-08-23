@@ -93,13 +93,15 @@ def choose_slots(
     list[int]
         Chosen slot indices, in ascending order.
     """
-    seconds_per_slot = 60.0 / timing.primary_bpm / 12.0
-    duration = len(logits) * seconds_per_slot
+    # Read the length off the grid rather than multiplying one tempo out, so a song carrying tempo
+    # changes is not measured against whichever of them happens to be first.
+    duration = timing.time_at_beat(len(logits) / SUBDIVISIONS_PER_BEAT) - timing.time_at_beat(0.0)
     wanted = max(int(config.rate * config.density * duration), _MIN_KEEP)
+    # A slot is shortest where the song is fastest, and the jack limit is a floor, so the spacing
+    # it implies is taken there and applied throughout.
+    quickest = 60.0 / timing.bpm_range()[1] / SUBDIVISIONS_PER_BEAT
     gap = (
-        0
-        if config.style == 'keyboard'
-        else max(round(FAST_JACK_SECONDS / max(seconds_per_slot, 1e-6)), 1)
+        0 if config.style == 'keyboard' else max(round(FAST_JACK_SECONDS / max(quickest, 1e-6)), 1)
     )
     scores = on_grid(logits, triplets=config.triplets)
     # Which measures rest is otherwise decided from the placement scores, and those are a model

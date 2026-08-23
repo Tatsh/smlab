@@ -202,7 +202,23 @@ def generate_rows(  # noqa: PLR0914
     if not slots:
         return []
     rng = np.random.default_rng(config.seed)
-    seconds_per_slot = 60.0 / timing.primary_bpm / 12.0
+
+    def when(slot: int) -> float:
+        """
+        Return the moment a grid slot falls on, following any tempo changes.
+
+        Parameters
+        ----------
+        slot : int
+            Grid slot, which may sit before the start of the chart.
+
+        Returns
+        -------
+        float
+            Seconds into the audio.
+        """
+        return timing.time_at_beat(slot / SUBDIVISIONS_PER_BEAT)
+
     rows: list[tuple[int, list[int]]] = []
     held: dict[int, int] = {}
     budget = Budget()
@@ -240,10 +256,15 @@ def generate_rows(  # noqa: PLR0914
             # leave a head with no terminator, which makes the panel read as occupied for the rest
             # of the song and stops the file loading at all.
             _expire_holds(rows, held, slot)
-            gap = (slot - previous_slot) * seconds_per_slot
-            following = slots[step + 1] - slot if step + 1 < len(slots) else _MAX_DELTA
-            room = min(gap, following * seconds_per_slot)
-            in_run = budget.enter_run(gap, seconds_per_slot)
+            here = when(slot)
+            gap = here - when(previous_slot)
+            following = (
+                when(slots[step + 1]) - here
+                if step + 1 < len(slots)
+                else when(slot + _MAX_DELTA) - here
+            )
+            room = min(gap, following)
+            in_run = budget.enter_run(gap, when(slot + 1) - here)
             mask = permitted(
                 vocabulary,
                 config,
