@@ -321,6 +321,40 @@ def test_generation_detects_the_timing_when_none_is_given(
 
 
 @pytest.mark.usefixtures('generation')
+def test_a_supplied_tempo_reaches_the_offset_estimator(
+    runner: CliRunner, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    # Overriding the tempo after the estimator has already fitted a phase to its own leaves the
+    # two describing different grids, and the offset then sits half the accumulated drift out.
+    spy = mocker.patch(
+        'smlab.main.estimate_timing',
+        return_value={'bpm': 128.199, 'confidence': 0.0, 'offset': 0.0},
+    )
+    result = runner.invoke(
+        main,
+        [
+            'generate',
+            str(_audio(tmp_path / 'song.wav')),
+            '-o',
+            str(tmp_path / 'out'),
+            '-T',
+            'Song',
+            '-c',
+            str(_checkpoints(tmp_path)),
+            '-D',
+            'Easy',
+            '--nps',
+            '2',
+            '--bpm',
+            '128.199',
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert spy.call_args.kwargs['bpm'] == pytest.approx(128.199)
+    assert 'Using 128.199 BPM' in result.output
+
+
+@pytest.mark.usefixtures('generation')
 def test_the_tempo_can_be_scaled_and_the_grid_shifted(
     runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -96,6 +96,40 @@ def test_timing_puts_beat_zero_on_the_first_pulse() -> None:
     assert -found['offset'] == pytest.approx(phase - ONSET_LATENCY_SECONDS, abs=0.02)
 
 
+def test_a_supplied_tempo_is_what_the_phase_is_fitted_against() -> None:
+    # Snapping rounds a tempo like this to 128.0, and a phase fitted at 128.0 describes a
+    # different grid: over a long song the two drift apart and the offset lands half the drift
+    # out. The supplied tempo has to reach the fit, not merely replace its answer afterwards.
+    phase = 0.25
+    envelope = _pulses(bpm=128.199, seconds=120.0, phase=phase)
+    envelopes = Envelopes(phase=envelope, tempo=envelope)
+    fitted = estimate_timing_from_envelopes(envelopes, _RATE, bpm=128.199)
+    assert fitted['bpm'] == pytest.approx(128.199)
+    assert -fitted['offset'] == pytest.approx(phase - ONSET_LATENCY_SECONDS, abs=0.02)
+    # Left to itself the search snaps to a round number, and the offset moves with it.
+    searched = estimate_timing_from_envelopes(envelopes, _RATE)
+    assert searched['bpm'] == pytest.approx(128.0)
+    assert searched['offset'] != pytest.approx(fitted['offset'], abs=0.02)
+
+
+def test_a_supplied_tempo_reports_no_confidence() -> None:
+    # Nothing was weighed against anything, so there is no ratio to report.
+    envelope = _pulses()
+    found = estimate_timing_from_envelopes(
+        Envelopes(phase=envelope, tempo=envelope), _RATE, bpm=99.0
+    )
+    assert found['bpm'] == pytest.approx(99.0)
+    assert found['confidence'] == pytest.approx(0.0, abs=1e-12)
+
+
+def test_a_supplied_tempo_survives_an_envelope_carrying_nothing() -> None:
+    # The caller's tempo is not the estimator's to discard, even when there is no phase to find.
+    silence = np.zeros(4096, dtype=np.float32)
+    found = estimate_timing_from_envelopes(Envelopes(phase=silence, tempo=silence), _RATE, bpm=99.0)
+    assert found['bpm'] == pytest.approx(99.0)
+    assert found['offset'] == pytest.approx(0.0, abs=1e-12)
+
+
 def test_a_confidence_is_reported_alongside_the_timing() -> None:
     envelope = _pulses()
     assert (

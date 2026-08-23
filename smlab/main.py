@@ -260,15 +260,22 @@ def _resolve_timing(
         timing = TimingData.constant(bpm, offset)
         click.echo(f'Using supplied timing: {bpm:.3f} BPM, offset {offset:+.4f}.')
     else:
-        estimate = estimate_timing(audio)
+        # A supplied tempo has to reach the estimator, not merely replace its answer afterwards.
+        # The phase is fitted to whichever tempo the estimator used, so overriding the tempo alone
+        # leaves the two describing different grids and the offset wrong by half the drift.
+        estimate = estimate_timing(audio, bpm=bpm)
         timing = TimingData.constant(
-            bpm if bpm > 0 else estimate['bpm'],
-            offset if offset is not None else estimate['offset'],
+            estimate['bpm'], offset if offset is not None else estimate['offset']
         )
-        click.echo(
-            f'Detected {timing.primary_bpm:.3f} BPM, offset '
-            f'{timing.offset:+.4f} (confidence {estimate["confidence"]:.2f}).'
-        )
+        if bpm > 0:
+            click.echo(
+                f'Using {timing.primary_bpm:.3f} BPM, offset {timing.offset:+.4f} fitted to it.'
+            )
+        else:
+            click.echo(
+                f'Detected {timing.primary_bpm:.3f} BPM, offset '
+                f'{timing.offset:+.4f} (confidence {estimate["confidence"]:.2f}).'
+            )
     # The tempo estimator picks its phase by taking the loudest point of a folded envelope, which is
     # not where a downbeat is. Given the tempo, the phase model decides that separately and far
     # better, so it replaces the offset whenever one was not supplied outright.

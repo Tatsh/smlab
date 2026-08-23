@@ -342,7 +342,12 @@ def estimate_tempo(
 
 
 def estimate_timing_from_envelopes(
-    envelopes: Envelopes, frame_rate: float, *, min_bpm: float = MIN_BPM, max_bpm: float = MAX_BPM
+    envelopes: Envelopes,
+    frame_rate: float,
+    *,
+    bpm: float = 0.0,
+    min_bpm: float = MIN_BPM,
+    max_bpm: float = MAX_BPM,
 ) -> TimingEstimate:
     """
     Estimate tempo and offset from precomputed onset envelopes.
@@ -353,6 +358,9 @@ def estimate_timing_from_envelopes(
         The envelopes, which must share a frame rate.
     frame_rate : float
         Envelope frames per second.
+    bpm : float
+        Tempo to fit the phase against, or zero to search for one. A supplied tempo is reported
+        back with a confidence of zero, since nothing was chosen.
     min_bpm : float
         Lowest tempo considered.
     max_bpm : float
@@ -364,24 +372,37 @@ def estimate_timing_from_envelopes(
         The estimated tempo, offset, and a confidence ratio.
     """
     tempo_values = envelopes.tempo.astype(np.float64)
-    if len(tempo_values) < _MIN_FOLD_FRAMES or not np.any(tempo_values > 0):
+    usable = len(tempo_values) >= _MIN_FOLD_FRAMES and bool(np.any(tempo_values > 0))
+    if bpm > 0:
+        # A tempo given by the caller is not a candidate to be weighed, so there is no confidence
+        # to report. The phase still has to be fitted against it: fitting against a tempo the
+        # search chose instead leaves the two describing different grids, and the offset is then
+        # wrong by half the drift the mismatch accumulates.
+        chosen, confidence = bpm, 0.0
+    elif not usable:
         return _EMPTY.copy()
-    bpm, confidence = estimate_tempo(tempo_values, frame_rate, min_bpm=min_bpm, max_bpm=max_bpm)
-    if bpm <= 0:
+    else:
+        chosen, confidence = estimate_tempo(
+            tempo_values, frame_rate, min_bpm=min_bpm, max_bpm=max_bpm
+        )
+    if chosen <= 0:
         return _EMPTY.copy()
-    period = 60.0 / bpm
+    if not usable:
+        return {'bpm': chosen, 'confidence': 0.0, 'offset': 0.0}
+    period = 60.0 / chosen
     phase_values = envelopes.phase.astype(np.float64)
     # Folding already locks onto the downbeat in most music, because that is where the strongest
     # recurring onset sits. Re-picking the loudest of the four beats afterwards moves off it, since
     # the backbeat is usually louder.
     downbeat = _refine_phase(phase_values, frame_rate, period) - ONSET_LATENCY_SECONDS
     # Beat 0 sits at -OFFSET, so the offset is the negated downbeat time.
-    return {'bpm': bpm, 'confidence': confidence, 'offset': -downbeat}
+    return {'bpm': chosen, 'confidence': confidence, 'offset': -downbeat}
 
 
 def estimate_timing(
     path: Path,
     *,
+    bpm: float = 0.0,
     sample_rate: int = DEFAULT_SAMPLE_RATE,
     min_bpm: float = MIN_BPM,
     max_bpm: float = MAX_BPM,
@@ -393,6 +414,8 @@ def estimate_timing(
     ----------
     path : :py:class:`~pathlib.Path`
         The audio file to analyse.
+    bpm : float
+        Tempo to fit the phase against, or zero to search for one.
     sample_rate : int
         Sample rate to decode at.
     min_bpm : float
@@ -411,5 +434,5 @@ def estimate_timing(
         tempo=onset_envelope(samples, TEMPO_PARAMS),
     )
     return estimate_timing_from_envelopes(
-        envelopes, TEMPO_PARAMS.frame_rate, min_bpm=min_bpm, max_bpm=max_bpm
+        envelopes, TEMPO_PARAMS.frame_rate, bpm=bpm, min_bpm=min_bpm, max_bpm=max_bpm
     )
