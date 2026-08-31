@@ -21,6 +21,7 @@ extend-ignore = [
   "S101",
   "S105",
   "S106",
+  "pytest-fixture-autouse",
 ]
 
 [tool.ruff.lint.pep8-naming]
