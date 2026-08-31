@@ -17,6 +17,7 @@ from smlab.weights import (
     REPOSITORY_VARIABLE,
     URL_VARIABLE,
     WeightsError,
+    asset_name,
     download_directory,
     file_digest,
     resolve_weights,
@@ -63,18 +64,25 @@ def test_release_comes_from_the_environment(monkeypatch: pytest.MonkeyPatch) -> 
     assert weights_release() == 'weights-2'
 
 
+def test_a_published_asset_carries_the_version(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(RELEASE_VARIABLE, 'v9.9.9')
+    assert asset_name(CHART_WEIGHTS) == 'smlab-9.9.9-chart.pt'
+    assert asset_name(CHART_WEIGHTS, 'v1.2.3') == 'smlab-1.2.3-chart.pt'
+
+
 def test_the_url_names_a_release_asset(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(REPOSITORY_VARIABLE, 'someone/else')
     monkeypatch.setenv(RELEASE_VARIABLE, 'v9.9.9')
     assert weights_url(CHART_WEIGHTS) == (
-        f'https://github.com/someone/else/releases/download/v9.9.9/{CHART_WEIGHTS}'
+        'https://github.com/someone/else/releases/download/v9.9.9/smlab-9.9.9-chart.pt'
     )
 
 
 @pytest.mark.parametrize('base', ['https://mirror.example/smlab', 'https://mirror.example/smlab/'])
 def test_the_url_can_point_at_a_mirror(base: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(RELEASE_VARIABLE, 'v9.9.9')
     monkeypatch.setenv(URL_VARIABLE, base)
-    assert weights_url(CHART_WEIGHTS) == f'https://mirror.example/smlab/{CHART_WEIGHTS}'
+    assert weights_url(CHART_WEIGHTS) == 'https://mirror.example/smlab/smlab-9.9.9-chart.pt'
 
 
 def test_the_search_covers_user_and_system_directories(tmp_path: Path) -> None:

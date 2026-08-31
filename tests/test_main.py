@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from pathlib import Path
 from typing import TYPE_CHECKING
 import json
 import subprocess as sp
@@ -35,14 +36,13 @@ from smlab.weights import (
     CHART_WEIGHTS,
     OFFSET_WEIGHTS,
     REPOSITORY_VARIABLE,
+    asset_name,
     download_directory,
     file_digest,
     weights_url,
 )
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from click.testing import CliRunner
     from pytest_mock import MockerFixture
 
@@ -990,7 +990,10 @@ def test_publishing_uploads_the_checkpoints_and_their_digests(
     ]
     uploaded = run.call_args.args[0]
     assert uploaded[:4] == ('/usr/bin/gh', 'release', 'upload', 'v1')
-    assert str(manifest) in uploaded
+    assert [Path(argument).name for argument in uploaded[4:6]] == [
+        asset_name(name, 'v1') for name in (CHART_WEIGHTS, OFFSET_WEIGHTS)
+    ]
+    assert not any(CHECKSUM_ASSET in argument for argument in uploaded[4:])
 
 
 def test_publishing_creates_the_release_as_a_draft(

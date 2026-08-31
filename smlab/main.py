@@ -12,6 +12,7 @@ import math
 import os
 import shutil
 import subprocess as sp
+import tempfile
 
 from bascom import setup_logging
 import click
@@ -61,6 +62,7 @@ from .weights import (
     RELEASE_VARIABLE,
     REPOSITORY_VARIABLE,
     WeightsError,
+    asset_name,
     download_directory,
     file_digest,
     resolve_weights,
@@ -1022,6 +1024,32 @@ def generate(  # noqa: PLR0917
         click.echo(f'Drew {IMAGE_DIRECTORY}/{picture.name}.')
 
 
+def _stage(source: Path, destination: Path) -> Path:
+    """
+    Put a file under the name it is published as.
+
+    Linked rather than copied where the filesystem allows it, since the chart model is a hundred
+    and fifty megabytes.
+
+    Parameters
+    ----------
+    source : :py:class:`~pathlib.Path`
+        File to publish.
+    destination : :py:class:`~pathlib.Path`
+        Where it is to appear under its published name.
+
+    Returns
+    -------
+    :py:class:`~pathlib.Path`
+        The staged file.
+    """
+    try:
+        os.link(source, destination)
+    except OSError:
+        shutil.copyfile(source, destination)
+    return destination
+
+
 def _upload(repository: str, tag: str, files: Sequence[Path]) -> None:
     """
     Attach files to a GitHub release, creating it as a draft when it does not exist.
@@ -1100,7 +1128,8 @@ def publish(
         raise click.Abort
     digests = {name: file_digest(path) for name, path in present}
     for name, path in present:
-        click.echo(f'  {name}  {path.stat().st_size / 1e6:.1f} MB  {digests[name]}')
+        size = path.stat().st_size / 1e6
+        click.echo(f'  {asset_name(name, tag)}  {size:.1f} MB  {digests[name]}')
     if dry_run:
         click.echo(f'Would write {manifest} and upload the above to {target} at {tag}.')
         return
@@ -1109,7 +1138,9 @@ def publish(
         ''.join(f'{digest}  {name}\n' for name, digest in sorted(digests.items())), encoding='utf-8'
     )
     click.echo(f'Wrote {manifest}. Commit it before building the release.')
-    _upload(target, tag, (*(path for _, path in present), manifest))
+    with tempfile.TemporaryDirectory() as staging:
+        published = [_stage(path, Path(staging) / asset_name(name, tag)) for name, path in present]
+        _upload(target, tag, published)
     click.echo(
         f'Uploaded to {target} at {tag}. A draft release holds its assets back until it is '
         f'published.'

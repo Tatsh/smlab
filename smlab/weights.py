@@ -49,6 +49,7 @@ __all__ = (
     'REPOSITORY_VARIABLE',
     'URL_VARIABLE',
     'WeightsError',
+    'asset_name',
     'download_directory',
     'file_digest',
     'resolve_weights',
@@ -199,6 +200,29 @@ def weights_release() -> str:
     return os.environ.get(RELEASE_VARIABLE) or DEFAULT_RELEASE
 
 
+def asset_name(name: str, release: str | None = None) -> str:
+    """
+    Return the file name a checkpoint is published under.
+
+    A release asset carries the version, since it is downloaded into directories that hold files
+    from every version of everything, where a bare ``chart.pt`` would collide. What lands on the
+    machine keeps the plain name.
+
+    Parameters
+    ----------
+    name : str
+        Checkpoint file name as it is stored locally.
+    release : str | None
+        Release tag, or ``None`` for the configured one.
+
+    Returns
+    -------
+    str
+        Published file name, as in ``smlab-0.0.1-chart.pt``.
+    """
+    return f'smlab-{(release or weights_release()).removeprefix("v")}-{name}'
+
+
 def weights_url(name: str) -> str:
     """
     Return the address one checkpoint is downloaded from.
@@ -213,9 +237,13 @@ def weights_url(name: str) -> str:
     str
         A release asset URL, or the file below the base URL when one is configured.
     """
+    published = asset_name(name)
     if base := os.environ.get(URL_VARIABLE):
-        return f'{base.rstrip("/")}/{name}'
-    return f'https://github.com/{weights_repository()}/releases/download/{weights_release()}/{name}'
+        return f'{base.rstrip("/")}/{published}'
+    return (
+        f'https://github.com/{weights_repository()}/releases/download/'
+        f'{weights_release()}/{published}'
+    )
 
 
 def weights_directories(override: Path | None = None) -> tuple[Path, ...]:

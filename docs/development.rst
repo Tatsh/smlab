@@ -35,10 +35,11 @@ Publishing
 ----------
 
 ``smlab publish`` writes the digests of the checkpoints to ``smlab/assets/weights.sha256``, which is
-what an installed copy verifies a download against, and then attaches the checkpoints and that file
-to a GitHub release through :command:`gh`. A release that does not exist yet is created as a draft,
-and one that already exists is uploaded to rather than replaced, so the weights can be put in place
-before a release is tagged.
+what an installed copy verifies a download against, and then attaches the checkpoints to a GitHub
+release through :command:`gh`, named for the version. A release that does not exist yet is created
+as a draft; one that already exists is uploaded to rather than replaced, and an asset of the same
+name is overwritten, so the weights can be put in place before a release is tagged and the command
+can be run again without making a second draft.
 
 .. code-block:: shell
 

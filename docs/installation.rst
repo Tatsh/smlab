@@ -32,16 +32,18 @@ Packaging the weights
 
 A distribution that wants ``smlab`` to work offline installs ``chart.pt`` and ``offset.pt`` into
 ``/usr/share/smlab/``. Every release carries them as assets, so the tag to fetch is the version
-being packaged, and their digests are bundled in the wheel as ``smlab/assets/weights.sha256``, which
-:command:`sha256sum -c` reads directly.
+being packaged. The assets carry the version in their own names, since they are downloaded into
+directories that hold files from every version of everything, while the installed files keep the
+plain names the program looks for.
 
 .. code-block:: shell
 
-   https://github.com/Tatsh/smlab/releases/download/v0.0.1/chart.pt
-   https://github.com/Tatsh/smlab/releases/download/v0.0.1/offset.pt
+   https://github.com/Tatsh/smlab/releases/download/v0.0.1/smlab-0.0.1-chart.pt
+   https://github.com/Tatsh/smlab/releases/download/v0.0.1/smlab-0.0.1-offset.pt
 
-Downloading is checked against those digests, and a download that does not match is discarded
-rather than loaded.
+Their digests are bundled in the wheel as ``smlab/assets/weights.sha256``, which
+:command:`sha256sum -c` reads directly. A download is checked against them and discarded rather
+than loaded when it does not match.
 
 Configuration
 -------------
