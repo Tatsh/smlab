@@ -7,7 +7,7 @@ local utils = import 'utils.libsonnet';
   primary_module: 'smlab',
   description: 'Generate StepMania dance-single charts from audio using machine learning.',
   keywords: ['audio', 'command line', 'dance dance revolution', 'machine learning', 'simfile', 'stepmania'],
-  version: '0.0.0',
+  version: '0.0.1',
   want_main: true,
   want_flatpak: true,
   // Librosa requires 3.12.

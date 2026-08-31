@@ -27,9 +27,9 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.TH "SMLAB" "1" "Aug 22, 2026" "0.0.0" "smlab"
+.TH "SMLAB" "1" "Aug 31, 2026" "0.0.1" "smlab"
 .SH NAME
-smlab \- smlab v0.0.0
+smlab \- smlab v0.0.1
 .SH COMMAND REFERENCE
 .SS smlab
 .sp
@@ -69,6 +69,58 @@ Arguments
 .INDENT 0.0
 .TP
 .B SIMFILE
+Required argument
+.UNINDENT
+.SS drift
+.sp
+Report how a song\(aqs tempo wanders, and where warp markers would go. Experimental.
+.sp
+A chart is written against one grid, so a song whose tempo moves can only be charted correctly
+by saying where it moves. Pass what this prints back to \fIgenerate\fP as \-\-warp. Where the beat
+jumps rather than changing speed, which is what an edit in the audio looks like, it says so and
+no warp will help.
+.sp
+Usage
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.EX
+smlab drift [OPTIONS] AUDIO
+.EE
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-\-bpm <bpm>
+Tempo to measure against. Detected when omitted.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-slip <slip>
+Seconds of gain or loss across a stretch before it is worth a warp marker.
+.INDENT 7.0
+.TP
+.B Default
+\fB0.02\fP
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-i, \-\-image <image>
+Also draw the beat against the grid to this PNG.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-offset <offset>
+Offset to draw the grid from, where beat 0 falls at minus this. Detected when omitted.
+.UNINDENT
+.sp
+Arguments
+.INDENT 0.0
+.TP
+.B AUDIO
 Required argument
 .UNINDENT
 .SS envelopes
@@ -218,6 +270,21 @@ Override the detected offset.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B \-\-warp <warps>
+Experimental. Change tempo partway through, as SECONDS:BPM. Repeatable. Pass it without a value to fit the changes from the audio. See the drift command.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-warp\-slip <warp_slip>
+Seconds the grid may wander from the music before a fitted warp writes another tempo.
+.INDENT 7.0
+.TP
+.B Default
+\fB0.02\fP
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
 .B \-\-shift\-beats <shift_beats>
 Move beat 0 later by this many beats. Use 0.5 when the grid locked onto the off\-beat.
 .UNINDENT
@@ -316,8 +383,8 @@ Repository to download weights from. Also settable as SMLAB_WEIGHTS_REPO.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-\-weights\-revision <weights_revision>
-Pin the weights to a revision. Also settable as SMLAB_WEIGHTS_REVISION.
+.B \-\-weights\-release <weights_tag>
+Pin the weights to a release tag. Also settable as SMLAB_WEIGHTS_RELEASE.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -390,8 +457,18 @@ Directory holding the trained weights.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B \-m, \-\-manifest <manifest>
+Checksum file to write and upload, which an installed copy verifies a download against.
+.UNINDENT
+.INDENT 0.0
+.TP
 .B \-r, \-\-repository <repository>
-Repository to upload to. Defaults to tatsh/smlab.
+GitHub repository to upload to. Defaults to Tatsh/smlab.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-R, \-\-release <release>
+Release tag to attach the weights to. Defaults to the one this build downloads from.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -579,6 +656,26 @@ Where to write the vocabulary.
 .TP
 .B \-l, \-\-limit <limit>
 Largest vocabulary to build.
+.UNINDENT
+.SS weights
+.sp
+Say where the trained weights are looked for and which of them are present.
+.sp
+Usage
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.EX
+smlab weights [OPTIONS]
+.EE
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-c, \-\-checkpoints <checkpoints>
+Directory of locally trained checkpoints to search first.
 .UNINDENT
 .SH AUTHOR
 Andrew Udvare <audvare@gmail.com>
