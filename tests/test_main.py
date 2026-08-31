@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import TYPE_CHECKING
 import json
+import subprocess as sp
 
 import numpy as np
 import pytest
@@ -24,12 +25,20 @@ from smlab.main import (
     main,
 )
 from smlab.offset import OffsetModel
+from smlab.resources import CHECKSUM_ASSET
 from smlab.simfile import load_simfile
 from smlab.stems import STEM_NAMES, SeparationError
 from smlab.timing import TimingData
 from smlab.vocab import Vocabulary, encode_row
 from smlab.warp import TempoReading, Warp, WarpFit
-from smlab.weights import CHART_WEIGHTS, OFFSET_WEIGHTS, REPOSITORY_VARIABLE
+from smlab.weights import (
+    CHART_WEIGHTS,
+    OFFSET_WEIGHTS,
+    REPOSITORY_VARIABLE,
+    download_directory,
+    file_digest,
+    weights_url,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -832,7 +841,7 @@ def test_the_weights_repository_can_be_overridden(
             '0',
             '--weights-repo',
             'someone/weights',
-            '--weights-revision',
+            '--weights-release',
             'v1',
         ],
     )
@@ -948,8 +957,9 @@ def test_publishing_lists_what_it_would_upload(runner: CliRunner, tmp_path: Path
         (directory / name).write_bytes(b'0' * 2048)
     result = runner.invoke(main, ['publish', '-c', str(directory), '-n', '-r', 'someone/weights'])
     assert result.exit_code == 0
-    assert 'Would upload' in result.output
+    assert 'Would write' in result.output
     assert CHART_WEIGHTS in result.output
+    assert file_digest(directory / CHART_WEIGHTS) in result.output
 
 
 def test_publishing_without_the_weights_stops(runner: CliRunner, tmp_path: Path) -> None:
@@ -960,17 +970,68 @@ def test_publishing_without_the_weights_stops(runner: CliRunner, tmp_path: Path)
     assert 'missing' in result.output
 
 
-def test_publishing_uploads_every_checkpoint(
+def test_publishing_uploads_the_checkpoints_and_their_digests(
     runner: CliRunner, tmp_path: Path, mocker: MockerFixture
 ) -> None:
     directory = tmp_path / 'checkpoints'
     directory.mkdir()
     for name in (CHART_WEIGHTS, OFFSET_WEIGHTS):
         (directory / name).write_bytes(b'0' * 2048)
-    api = mocker.patch('huggingface_hub.HfApi')
-    result = runner.invoke(main, ['publish', '-c', str(directory), '-r', 'someone/weights'])
-    assert result.exit_code == 0
-    assert api.return_value.upload_file.call_count == 2
+    manifest = tmp_path / CHECKSUM_ASSET
+    mocker.patch('shutil.which', return_value='/usr/bin/gh')
+    run = mocker.patch('subprocess.run')
+    result = runner.invoke(
+        main,
+        ['publish', '-c', str(directory), '-r', 'someone/weights', '-m', str(manifest), '-R', 'v1'],
+    )
+    assert result.exit_code == 0, result.output
+    assert manifest.read_text().splitlines() == [
+        f'{file_digest(directory / name)}  {name}' for name in (CHART_WEIGHTS, OFFSET_WEIGHTS)
+    ]
+    uploaded = run.call_args.args[0]
+    assert uploaded[:4] == ('/usr/bin/gh', 'release', 'upload', 'v1')
+    assert str(manifest) in uploaded
+
+
+def test_publishing_creates_the_release_as_a_draft(
+    runner: CliRunner, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    directory = tmp_path / 'checkpoints'
+    directory.mkdir()
+    for name in (CHART_WEIGHTS, OFFSET_WEIGHTS):
+        (directory / name).write_bytes(b'0' * 2048)
+    mocker.patch('shutil.which', return_value='/usr/bin/gh')
+    run = mocker.patch('subprocess.run')
+    run.return_value.returncode = 1
+    result = runner.invoke(
+        main,
+        [
+            'publish',
+            '-c',
+            str(directory),
+            '-r',
+            'someone/weights',
+            '-m',
+            str(tmp_path / CHECKSUM_ASSET),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert '--draft' in run.call_args_list[1].args[0]
+
+
+def test_publishing_without_the_github_cli_stops(
+    runner: CliRunner, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    directory = tmp_path / 'checkpoints'
+    directory.mkdir()
+    for name in (CHART_WEIGHTS, OFFSET_WEIGHTS):
+        (directory / name).write_bytes(b'0' * 2048)
+    mocker.patch('shutil.which', return_value=None)
+    result = runner.invoke(
+        main, ['publish', '-c', str(directory), '-m', str(tmp_path / CHECKSUM_ASSET)]
+    )
+    assert result.exit_code != 0
+    assert 'GitHub CLI' in result.output
 
 
 def test_a_failed_upload_is_reported(
@@ -980,11 +1041,31 @@ def test_a_failed_upload_is_reported(
     directory.mkdir()
     for name in (CHART_WEIGHTS, OFFSET_WEIGHTS):
         (directory / name).write_bytes(b'0' * 2048)
-    api = mocker.patch('huggingface_hub.HfApi')
-    api.return_value.upload_file.side_effect = RuntimeError('no write token')
-    result = runner.invoke(main, ['publish', '-c', str(directory), '-r', 'someone/weights'])
+    mocker.patch('shutil.which', return_value='/usr/bin/gh')
+    mocker.patch(
+        'subprocess.run',
+        side_effect=[mocker.Mock(returncode=0), sp.CalledProcessError(1, 'gh')],
+    )
+    result = runner.invoke(
+        main,
+        ['publish', '-c', str(directory), '-r', 'someone/weights', '-m', str(tmp_path / 'sums')],
+    )
     assert result.exit_code != 0
     assert 'Upload failed' in result.output
+
+
+def test_the_weights_command_says_where_it_looks(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    directory = tmp_path / 'checkpoints'
+    directory.mkdir()
+    (directory / CHART_WEIGHTS).write_bytes(b'0' * 2048)
+    result = runner.invoke(main, ['weights', '-c', str(directory)])
+    assert result.exit_code == 0, result.output
+    assert f'{directory}  {CHART_WEIGHTS}' in result.output
+    assert str(download_directory()) in result.output
+    assert weights_url(CHART_WEIGHTS) in result.output
 
 
 def test_the_scales_are_offered_by_name() -> None:

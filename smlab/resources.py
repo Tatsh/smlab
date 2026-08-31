@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 import io
 import json
 import logging
+import re
 
 import torch
 
@@ -24,19 +25,27 @@ if TYPE_CHECKING:
 
 __all__ = (
     'ASSET_DIRECTORY',
+    'CHECKSUM_ASSET',
     'PREVIEW_ASSET',
     'VOCABULARY_ASSET',
     'asset_bytes',
     'has_asset',
+    'load_checksums',
     'load_state_dict',
     'load_vocabulary',
 )
 
 log = logging.getLogger(__name__)
 
+_CHECKSUM_LINE = re.compile(r'^([0-9a-f]{64}) [ *](\S+)$')
 _PACKAGE = 'smlab'
 ASSET_DIRECTORY = 'assets'
 """Directory inside the package holding the bundled models.
+
+:meta hide-value:
+"""
+CHECKSUM_ASSET = 'weights.sha256'
+"""Bundled digests of the downloadable weights, in ``sha256sum`` format.
 
 :meta hide-value:
 """
@@ -96,6 +105,24 @@ def asset_bytes(name: str) -> bytes:
     except (ModuleNotFoundError, FileNotFoundError) as error:
         msg = f'{name} is not bundled with this installation of smlab.'
         raise FileNotFoundError(msg) from error
+
+
+def load_checksums() -> dict[str, str]:
+    """
+    Read the digests of the weights that are downloaded rather than bundled.
+
+    Returns
+    -------
+    dict[str, str]
+        SHA-256 digest keyed by file name, empty when the package carries no manifest.
+    """
+    try:
+        text = asset_bytes(CHECKSUM_ASSET).decode()
+    except FileNotFoundError:
+        log.debug('This installation carries no `%s`.', CHECKSUM_ASSET)
+        return {}
+    matches = (_CHECKSUM_LINE.match(line) for line in text.splitlines())
+    return {match[2]: match[1] for match in matches if match is not None}
 
 
 def load_state_dict(

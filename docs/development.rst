@@ -29,8 +29,24 @@ The offset model reads its own, much smaller cache of onset envelopes, and needs
 
    smlab envelopes && smlab train-offset
 
-Pass ``-c checkpoints`` to ``generate`` to use locally trained models instead of downloaded ones,
-and ``smlab publish`` to upload them.
+Pass ``-c checkpoints`` to ``generate`` to use locally trained models instead of downloaded ones.
+
+Publishing
+----------
+
+``smlab publish`` writes the digests of the checkpoints to ``smlab/assets/weights.sha256``, which is
+what an installed copy verifies a download against, and then attaches the checkpoints and that file
+to a GitHub release through :command:`gh`. A release that does not exist yet is created as a draft,
+and one that already exists is uploaded to rather than replaced, so the weights can be put in place
+before a release is tagged.
+
+.. code-block:: shell
+
+   smlab publish -n              # what would be uploaded, and to where
+   smlab publish -R v0.0.1       # write the digests and upload
+
+Commit the manifest before building the release: a wheel whose digests do not match what the
+release serves refuses every download.
 
 Accuracy, measured on held-out songs
 ------------------------------------

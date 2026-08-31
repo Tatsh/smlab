@@ -48,8 +48,13 @@ Only `.ssc` carries everything the generator works out. `.sm` has no per-chart t
 radar and the chart hash go unwritten, and `.dwi` additionally cannot indicate a mine, a lift, or a
 roll: mines and lifts are dropped and a roll becomes an ordinary freeze.
 
-**The chart and offset weights are downloaded on first use**. Set `SMLAB_WEIGHTS_REPO` to fetch them
-from somewhere other than the default, or pass `-c` to point at a local `checkpoints/` directory.
+**The chart and offset weights are not bundled**: together they run to over 150 MB. They are looked
+for on the machine before anything is fetched, so a system package can install them into
+`/usr/share/smlab/` and nothing is ever downloaded. Otherwise they are pulled from the GitHub
+release once, verified against digests shipped in the wheel, and kept in `~/.local/share/smlab/`.
+`smlab weights` prints the whole search order. Pass `-c` to point at a local `checkpoints/`
+directory, or set `SMLAB_WEIGHTS_DIR` to name another one.
+
 Everything that does not need a model works without them: parsing, timing estimation, playability
 analysis, chart drawing.
 
@@ -188,7 +193,7 @@ smlab envelopes && smlab train-offset
 ```
 
 Pass `-c checkpoints` to `generate` to use locally trained models instead of downloaded ones, and
-`smlab publish` to upload them.
+`smlab publish` to attach them, with their digests, to a GitHub release.
 
 ## Development
 

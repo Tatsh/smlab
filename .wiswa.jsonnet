@@ -23,7 +23,7 @@ local utils = import 'utils.libsonnet';
     '/out/',
   ],
   // Checkpoints are binary but are shipped, so they stay out of shared_ignore.
-  prettierignore+: ['*.pt'],
+  prettierignore+: ['*.pt', '*.sha256'],
   pyproject+: {
     project+: {
       classifiers: utils.pyprojectClassifiers(top, [
@@ -34,11 +34,11 @@ local utils = import 'utils.libsonnet';
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
       ]),
       dependencies+: [
-        'huggingface-hub>=1.27.0',
         'librosa>=1.0.0',
         'mutagen>=1.48.1',
         'numpy>=2.5.2',
         'pillow>=12.3.0',
+        'platformdirs>=4.11.3',
         'scipy>=1.18.0',
         'soundfile>=0.14.0',
         'torch>=2.11.0',

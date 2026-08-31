@@ -13,9 +13,11 @@ from smlab.resources import (
     VOCABULARY_ASSET,
     asset_bytes,
     has_asset,
+    load_checksums,
     load_state_dict,
     load_vocabulary,
 )
+from smlab.weights import CHART_WEIGHTS, OFFSET_WEIGHTS
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -66,6 +68,25 @@ def test_local_vocabulary_overrides_the_bundled_one(tmp_path: Path) -> None:
     path = tmp_path / 'vocabulary.json'
     path.write_text('[343, 49]')
     assert load_vocabulary(path).patterns == (343, 49)
+
+
+def test_every_downloaded_checkpoint_has_a_bundled_digest() -> None:
+    checksums = load_checksums()
+    assert set(checksums) == {CHART_WEIGHTS, OFFSET_WEIGHTS}
+    assert all(len(digest) == 64 for digest in checksums.values())
+
+
+def test_checksums_are_absent_when_the_manifest_is_not_bundled(mocker: MockerFixture) -> None:
+    mocker.patch('smlab.resources.asset_bytes', side_effect=FileNotFoundError)
+    assert load_checksums() == {}
+
+
+def test_lines_that_are_not_digests_are_ignored(mocker: MockerFixture) -> None:
+    mocker.patch(
+        'smlab.resources.asset_bytes',
+        return_value=b'# a comment\n\n' + (b'0' * 64) + b' *chart.pt\n',
+    )
+    assert load_checksums() == {CHART_WEIGHTS: '0' * 64}
 
 
 def test_a_missing_asset_package_is_reported_as_absent(mocker: MockerFixture) -> None:

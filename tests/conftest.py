@@ -9,6 +9,13 @@ import numpy as np
 import pytest
 import soundfile as sf  # type: ignore[import-untyped]  # No stubs are published.
 
+from smlab.weights import (
+    DIRECTORY_VARIABLE,
+    RELEASE_VARIABLE,
+    REPOSITORY_VARIABLE,
+    URL_VARIABLE,
+)
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -63,6 +70,20 @@ SSC_TEXT = """#VERSION:0.83;
 0001
 ;
 """
+
+
+@pytest.fixture(autouse=True)
+def _weights_elsewhere(
+    monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    # Weights are looked for in the user's own directories, so without this a machine that has
+    # already downloaded a set would answer lookups the tests mean to fail.
+    root = tmp_path_factory.mktemp('directories')
+    monkeypatch.setenv('XDG_CACHE_HOME', str(root / 'cache'))
+    monkeypatch.setenv('XDG_DATA_HOME', str(root / 'data'))
+    monkeypatch.setenv('XDG_DATA_DIRS', str(root / 'system'))
+    for name in (DIRECTORY_VARIABLE, RELEASE_VARIABLE, REPOSITORY_VARIABLE, URL_VARIABLE):
+        monkeypatch.delenv(name, raising=False)
 
 
 @pytest.fixture

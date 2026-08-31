@@ -12,6 +12,7 @@
 *.npy
 *.npz
 *.pt
+*.sha256
 *~
 .*.swp
 .*_cache/

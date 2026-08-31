@@ -2,9 +2,19 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import TypedDict
 
-__all__ = ('ChartRecord', 'SongRecord', 'TimingEstimate')
+__all__ = ('ChartRecord', 'ProgressCallback', 'SongRecord', 'TimingEstimate')
+
+ProgressCallback = Callable[[str, int, int], None]
+"""
+Reports the progress of a download: file name, bytes received, and total expected.
+
+The total is zero when the server does not say how large the file is.
+
+:meta hide-value:
+"""
 
 
 class ChartRecord(TypedDict):

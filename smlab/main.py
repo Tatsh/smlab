@@ -10,6 +10,8 @@ import json
 import logging
 import math
 import os
+import shutil
+import subprocess as sp
 
 from bascom import setup_logging
 import click
@@ -36,7 +38,7 @@ from .heads import ChartModel
 from .offset import OffsetModel, refine_offset
 from .playability import Style, analyze_rows
 from .preview import DEFAULT_SAMPLE_LENGTH, PreviewModel, predict_sample_start
-from .resources import PREVIEW_ASSET, load_state_dict, load_vocabulary
+from .resources import CHECKSUM_ASSET, PREVIEW_ASSET, load_state_dict, load_vocabulary
 from .simfile import load_simfile
 from .stems import SeparationError, load_separator
 from .stems.cache import build_stem_cache
@@ -56,11 +58,16 @@ from .weights import (
     CHART_WEIGHTS,
     DEFAULT_REPOSITORY,
     OFFSET_WEIGHTS,
+    RELEASE_VARIABLE,
     REPOSITORY_VARIABLE,
-    REVISION_VARIABLE,
     WeightsError,
+    download_directory,
+    file_digest,
     resolve_weights,
+    weights_directories,
+    weights_release,
     weights_repository,
+    weights_url,
 )
 from .writer import Format, SongMetadata, write_song
 
@@ -245,6 +252,25 @@ class _DifficultySpec(click.ParamType[tuple[str, int]]):
         return match, int(rating) if rating else 0
 
 
+def _show_progress(name: str, received: int, total: int) -> None:
+    """
+    Draw the progress of a download over one line of the terminal.
+
+    Parameters
+    ----------
+    name : str
+        Checkpoint being fetched.
+    received : int
+        Bytes received so far.
+    total : int
+        Bytes expected, or zero when the server did not say.
+    """
+    done = f'{received / total:.0%}' if total else f'{received / 1e6:.0f} MB'
+    click.echo(f'\rFetching {name}: {done}', err=True, nl=False)
+    if total and received >= total:
+        click.echo('', err=True)
+
+
 def _load_offset_model(checkpoints: Path | None) -> OffsetModel | None:
     """
     Load the downbeat phase model, or report that it is unavailable.
@@ -261,7 +287,7 @@ def _load_offset_model(checkpoints: Path | None) -> OffsetModel | None:
         not fatal: the tempo estimator supplies an offset of its own, just a worse one.
     """
     try:
-        path = resolve_weights(OFFSET_WEIGHTS, checkpoints)
+        path = resolve_weights(OFFSET_WEIGHTS, checkpoints, progress=_show_progress)
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         model = OffsetModel().to(device)
         model.load_state_dict(torch.load(path, map_location=device)['model'])
@@ -669,7 +695,7 @@ def _load_chart_model(
     """
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     try:
-        path = resolve_weights(CHART_WEIGHTS, checkpoints)
+        path = resolve_weights(CHART_WEIGHTS, checkpoints, progress=_show_progress)
         blob = torch.load(path, map_location=device, weights_only=False)
         vocabulary = load_vocabulary(vocabulary_path)
         model = ChartModel(blob['vocabulary'], EncoderConfig(), blob['prior'])
@@ -838,9 +864,10 @@ def _load_chart_model(
     help=f'Repository to download weights from. Also settable as {REPOSITORY_VARIABLE}.',
 )
 @click.option(
-    '--weights-revision',
+    '--weights-release',
+    'weights_tag',
     default=None,
-    help=f'Pin the weights to a revision. Also settable as {REVISION_VARIABLE}.',
+    help=f'Pin the weights to a release tag. Also settable as {RELEASE_VARIABLE}.',
 )
 @click.option(
     '-c',
@@ -897,7 +924,7 @@ def generate(  # noqa: PLR0917
     nps: float,
     seed: int,
     weights_repo: str | None,
-    weights_revision: str | None,
+    weights_tag: str | None,
     checkpoints: Path | None,
     vocabulary: Path | None,
 ) -> None:
@@ -905,8 +932,8 @@ def generate(  # noqa: PLR0917
     """Generate a song folder holding a simfile and a copy of the audio."""  # noqa: DOC501
     if weights_repo:
         os.environ[REPOSITORY_VARIABLE] = weights_repo
-    if weights_revision:
-        os.environ[REVISION_VARIABLE] = weights_revision
+    if weights_tag:
+        os.environ[RELEASE_VARIABLE] = weights_tag
     model, vocab, device = _load_chart_model(checkpoints, vocabulary)
     timing = _resolve_timing(
         audio,
@@ -995,6 +1022,44 @@ def generate(  # noqa: PLR0917
         click.echo(f'Drew {IMAGE_DIRECTORY}/{picture.name}.')
 
 
+def _upload(repository: str, tag: str, files: Sequence[Path]) -> None:
+    """
+    Attach files to a GitHub release, creating it as a draft when it does not exist.
+
+    A release that already exists is uploaded to rather than replaced, so weights can be put in
+    place before the release pipeline runs and the same draft is the one that is published.
+
+    Parameters
+    ----------
+    repository : str
+        Repository as ``owner/name``.
+    tag : str
+        Release tag.
+    files : Sequence[:py:class:`~pathlib.Path`]
+        Files to upload.
+
+    Raises
+    ------
+    click.Abort
+        If the GitHub CLI is missing or any of its commands fail.
+    """
+    if (gh := shutil.which('gh')) is None:
+        click.echo('The GitHub CLI is needed to upload; see https://cli.github.com.', err=True)
+        raise click.Abort
+    view = (gh, 'release', 'view', tag, '--repo', repository)
+    create = (gh, 'release', 'create', tag, '--repo', repository, '--draft', '--title', tag)
+    upload = (gh, 'release', 'upload', tag, *(str(path) for path in files))
+    exists = sp.run(view, check=False, stdout=sp.DEVNULL, stderr=sp.DEVNULL).returncode == 0
+    click.echo(f'Uploading to {"the existing" if exists else "a new draft"} release {tag}.')
+    try:
+        if not exists:
+            sp.run((*create, '--notes', ''), check=True)
+        sp.run((*upload, '--repo', repository, '--clobber'), check=True)
+    except sp.CalledProcessError as error:
+        click.echo(f'Upload failed: {error}', err=True)
+        raise click.Abort from error
+
+
 @main.command()
 @click.option(
     '-c',
@@ -1004,36 +1069,69 @@ def generate(  # noqa: PLR0917
     help='Directory holding the trained weights.',
 )
 @click.option(
+    '-m',
+    '--manifest',
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=Path('smlab', 'assets', CHECKSUM_ASSET),
+    help='Checksum file to write and upload, which an installed copy verifies a download against.',
+)
+@click.option(
     '-r',
     '--repository',
     default=None,
-    help=f'Repository to upload to. Defaults to {DEFAULT_REPOSITORY}.',
+    help=f'GitHub repository to upload to. Defaults to {DEFAULT_REPOSITORY}.',
+)
+@click.option(
+    '-R',
+    '--release',
+    default=None,
+    help='Release tag to attach the weights to. Defaults to the one this build downloads from.',
 )
 @click.option('-n', '--dry-run', is_flag=True, help='List what would be uploaded and stop.')
-def publish(checkpoints: Path, repository: str | None, *, dry_run: bool) -> None:
+def publish(
+    checkpoints: Path, manifest: Path, repository: str | None, release: str | None, *, dry_run: bool
+) -> None:
     """Upload trained weights so an installed copy can download them."""  # noqa: DOC501
     target = repository or weights_repository()
-    present = [(name, checkpoints / name) for name in (CHART_WEIGHTS, OFFSET_WEIGHTS)]
-    missing = [name for name, path in present if not path.is_file()]
-    if missing:
+    tag = release or weights_release()
+    present = tuple((name, checkpoints / name) for name in (CHART_WEIGHTS, OFFSET_WEIGHTS))
+    if missing := [name for name, path in present if not path.is_file()]:
         click.echo(f'{checkpoints} is missing {", ".join(missing)}.', err=True)
         raise click.Abort
+    digests = {name: file_digest(path) for name, path in present}
     for name, path in present:
-        click.echo(f'  {name}  {path.stat().st_size / 1e6:.1f} MB')
+        click.echo(f'  {name}  {path.stat().st_size / 1e6:.1f} MB  {digests[name]}')
     if dry_run:
-        click.echo(f'Would upload the above to {target}.')
+        click.echo(f'Would write {manifest} and upload the above to {target} at {tag}.')
         return
-    click.echo(f'Uploading to {target}. This needs a write token; see `huggingface-cli login`.')
-    try:
-        from huggingface_hub import HfApi  # noqa: PLC0415
+    manifest.parent.mkdir(parents=True, exist_ok=True)
+    manifest.write_text(
+        ''.join(f'{digest}  {name}\n' for name, digest in sorted(digests.items())), encoding='utf-8'
+    )
+    click.echo(f'Wrote {manifest}. Commit it before building the release.')
+    _upload(target, tag, (*(path for _, path in present), manifest))
+    click.echo(
+        f'Uploaded to {target} at {tag}. A draft release holds its assets back until it is '
+        f'published.'
+    )
 
-        api = HfApi()
-        for name, path in present:
-            api.upload_file(path_or_fileobj=path, path_in_repo=name, repo_id=target)
-            click.echo(f'Uploaded {name}.')
-    except Exception as error:
-        click.echo(f'Upload failed: {error}', err=True)
-        raise click.Abort from error
+
+@main.command('weights')
+@click.option(
+    '-c',
+    '--checkpoints',
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    default=None,
+    help='Directory of locally trained checkpoints to search first.',
+)
+def weights_command(checkpoints: Path | None) -> None:
+    """Say where the trained weights are looked for and which of them are present."""
+    for directory in weights_directories(checkpoints):
+        found = [name for name in (CHART_WEIGHTS, OFFSET_WEIGHTS) if (directory / name).is_file()]
+        click.echo(f'  {directory}  {", ".join(found) if found else "-"}')
+    click.echo(f'Downloads are kept in {download_directory()}.')
+    for name in (CHART_WEIGHTS, OFFSET_WEIGHTS):
+        click.echo(f'  {name}  {weights_url(name)}')
 
 
 @main.command('drift')
