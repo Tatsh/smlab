@@ -12,6 +12,9 @@ local utils = import 'utils.libsonnet';
   want_flatpak: true,
   // Librosa requires 3.12.
   supported_python_versions: ['3.12', '3.13', '3.14'],
+  // torch publishes no wheels for Intel macOS or Windows on ARM, and no source distribution to
+  // fall back on, so those two can only ever fail to build.
+  supported_platforms: ['linux', 'macos-arm64', 'windows-x86_64'],
   publishing+: { flathub: 'sh.tat.smlab' },
   local uv_cache_dir = '.uv-cache',
   shared_ignore+: [
