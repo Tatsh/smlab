@@ -3,7 +3,7 @@ build-backend = "hatchling.build"
 requires = ["hatchling"]
 
 [dependency-groups]
-dev = ["commitizen>=4.17.0", "cz-path>=0.0.7", "mypy>=2.3.1", "ruff==0.16.4", "ty>=0.0.72"]
+dev = ["commitizen>=4.18.0", "cz-path>=0.0.7", "mypy>=2.3.1", "ruff>=0.16.4", "ty>=0.0.74"]
 docs = [
   "autodoc-pydantic>=2.2.0",
   "doc8>=2.0.0",
@@ -170,6 +170,7 @@ cache-dir = "~/.cache/ruff"
 force-exclude = true
 line-length = 100
 namespace-packages = ["docs", "tests"]
+output-prefer-rule-codes = true
 target-version = "py312"
 unsafe-fixes = true
 

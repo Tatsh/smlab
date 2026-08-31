@@ -16,6 +16,9 @@
   - `TD002`: Do not add an author in `TODO` comments.
   - `TD003`: Do not add a link in `TODO` comments.
   - `TD004`: Do not add a colon in `TODO` comments.
+- Never put a rationale after a suppression comment. `# noqa`, `# ruff: ignore[...]`,
+  `# type: ignore[...]`, `# ty: ignore[...]`, and `# pyright: ignore[...]` end with their codes and
+  nothing else.
 - When a function or method signature fits on one line within 100 characters, write its parameters
   horizontally. Example:
 
@@ -282,7 +285,7 @@ Keep `Any` only when:
 - `# type: ignore` must always include specific error code(s), e.g. `# type: ignore[assignment]` -
   bare `# type: ignore` is never acceptable.
 - `# type: ignore[...]` is only acceptable when `cast()` is not suitable and a limitation in
-  Python's type system causes the error. Always add a brief comment explaining the limitation.
+  Python's type system causes the error.
 - In all other cases, fix the root cause instead of suppressing the error.
 - Never weaken types to silence errors.
 - New `TypedDict`/`Protocol`/`NamedTuple` classes need docstrings (NumPy style), and every member
