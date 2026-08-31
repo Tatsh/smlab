@@ -22,7 +22,9 @@ local utils = import 'utils.libsonnet';
   // an installation from PyPI, and not to these.
   local torch_cpu_index = 'https://download.pytorch.org/whl/cpu',
   appimage+: {
-    requirements_options: ['--extra-index-url %s' % torch_cpu_index],
+    // python-appimage passes each line of its requirements.txt to pip as one argument, so an
+    // option cannot be written there; pip reads this from the environment instead.
+    build_env: { PIP_EXTRA_INDEX_URL: torch_cpu_index },
   },
   snapcraft+: {
     parts+: {

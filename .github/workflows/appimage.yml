@@ -28,6 +28,7 @@ jobs:
       - name: 'Build with python-appimage'
         env:
           GH_TOKEN: '${{ github.token }}'
+          PIP_EXTRA_INDEX_URL: 'https://download.pytorch.org/whl/cpu'
         run: |
           project_name=$(tomlq -r '.project.urls.repository|split("/")[-1]' pyproject.toml)
           version=$(tomlq -r .project.version pyproject.toml)
@@ -73,7 +74,6 @@ jobs:
                   cat "recipe/${script_name}.desktop"
               fi
               cat > recipe/requirements.txt <<EOF
-          --extra-index-url https://download.pytorch.org/whl/cpu
           $(pwd -P)
           EOF
               if [[ "${ACTIONS_RUNNER_DEBUG}" == 'true' ]]; then
