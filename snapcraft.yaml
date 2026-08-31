@@ -16,6 +16,8 @@ license: 'MIT'
 name: 'smlab'
 parts:
   smlab:
+    build-environment:
+      - PIP_EXTRA_INDEX_URL: 'https://download.pytorch.org/whl/cpu'
     build-packages: []
     plugin: 'python'
     python-packages:

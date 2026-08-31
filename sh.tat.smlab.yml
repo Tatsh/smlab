@@ -8,7 +8,7 @@ finish-args:
 modules:
   - build-commands:
       - 'pip3 install --prefix=/app uv'
-      - '/app/bin/uv pip install --prefix=/app .'
+      - '/app/bin/uv pip install --torch-backend=cpu --prefix=/app .'
     build-options:
       build-args:
         - '--share=network'

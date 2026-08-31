@@ -73,6 +73,7 @@ jobs:
                   cat "recipe/${script_name}.desktop"
               fi
               cat > recipe/requirements.txt <<EOF
+          --extra-index-url https://download.pytorch.org/whl/cpu
           $(pwd -P)
           EOF
               if [[ "${ACTIONS_RUNNER_DEBUG}" == 'true' ]]; then

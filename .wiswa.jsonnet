@@ -16,6 +16,31 @@ local utils = import 'utils.libsonnet';
   // fall back on, so those two can only ever fail to build.
   supported_platforms: ['linux', 'macos-arm64', 'windows-x86_64'],
   publishing+: { flathub: 'sh.tat.smlab' },
+  // torch's Linux wheels carry the CUDA runtime, so a bundle that takes what PyPI serves builds
+  // out to 2.7 GB, over GitHub's 2 GiB limit for a release asset. Every bundled format is
+  // therefore held to the CPU wheels, which is a real limitation of them: a GPU is available to
+  // an installation from PyPI, and not to these.
+  local torch_cpu_index = 'https://download.pytorch.org/whl/cpu',
+  appimage+: {
+    requirements_options: ['--extra-index-url %s' % torch_cpu_index],
+  },
+  snapcraft+: {
+    parts+: {
+      [top.project_name]+: {
+        'build-environment': [{ PIP_EXTRA_INDEX_URL: torch_cpu_index }],
+      },
+    },
+  },
+  flatpak+: {
+    modules: [
+      super.modules[0] {
+        'build-commands': [
+          'pip3 install --prefix=/app uv',
+          '/app/bin/uv pip install --torch-backend=cpu --prefix=/app .',
+        ],
+      },
+    ],
+  },
   local uv_cache_dir = '.uv-cache',
   shared_ignore+: [
     '*.npy',
