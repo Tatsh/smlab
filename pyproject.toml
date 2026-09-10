@@ -224,6 +224,7 @@ extend-ignore-names = ["test_*"]
 
 [tool.ruff.lint.per-file-ignores]
 "smlab/main.py" = ["PLR0913"]
+"tests/conftest.py" = ["pytest-fixture-autouse"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
