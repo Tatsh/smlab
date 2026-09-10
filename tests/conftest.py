@@ -19,6 +19,8 @@ from smlab.weights import (
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from pytest_mock import MockerFixture
+
 SM_TEXT = """#TITLE:Test Song;
 #ARTIST:Nobody;
 #MUSIC:test.ogg;
@@ -74,10 +76,13 @@ SSC_TEXT = """#VERSION:0.83;
 
 @pytest.fixture(autouse=True)
 def _weights_elsewhere(
-    monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
+    mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
 ) -> None:
     # Weights are looked for in the user's own directories, so without this a machine that has
-    # already downloaded a set would answer lookups the tests mean to fail.
+    # already downloaded a set would answer lookups the tests mean to fail. The release carries the
+    # checkpoints as assets, so the download that follows an exhausted search would otherwise
+    # succeed, and fetch over a hundred megabytes to do it.
+    mocker.patch('urllib.request.urlopen', side_effect=OSError('no network'))
     root = tmp_path_factory.mktemp('directories')
     monkeypatch.setenv('XDG_CACHE_HOME', str(root / 'cache'))
     monkeypatch.setenv('XDG_DATA_HOME', str(root / 'data'))

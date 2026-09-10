@@ -50,6 +50,7 @@ from tests.conftest import SM_TEXT
 
 _RATE = 22050
 _BPM = 150.0
+_REPORTING_STEP = 1 << 23
 _SMALL = EncoderConfig(
     channels=16, model_dimension=24, local_blocks=1, slot_layers=1, measure_layers=1, heads=2
 )
@@ -878,6 +879,43 @@ def test_generation_without_weights_stops(
     assert 'Could not load the chart model' in result.output
 
 
+def test_a_download_reports_its_progress(
+    runner: CliRunner, tmp_path: Path, mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    empty = tmp_path / 'checkpoints'
+    empty.mkdir()
+    (tmp_path / 'elsewhere').mkdir()
+    monkeypatch.chdir(tmp_path / 'elsewhere')
+    response = mocker.MagicMock()
+    # Two chunks, each past the reporting step, draw both the report that leaves the line open and
+    # the one that ends it.
+    response.headers.get.return_value = str(2 * _REPORTING_STEP)
+    response.read.side_effect = [b'0' * _REPORTING_STEP, b'0' * _REPORTING_STEP, b'']
+    response.__enter__.return_value = response
+    mocker.patch('urllib.request.urlopen', return_value=response)
+    result = runner.invoke(
+        main,
+        [
+            'generate',
+            str(_audio(tmp_path / 'song.wav')),
+            '-o',
+            str(tmp_path / 'out'),
+            '-T',
+            'Song',
+            '-c',
+            str(empty),
+            '--bpm',
+            str(_BPM),
+            '--offset',
+            '0',
+        ],
+    )
+    assert result.exit_code != 0
+    assert f'Fetching {CHART_WEIGHTS}: 50%' in result.output
+    assert f'Fetching {CHART_WEIGHTS}: 100%' in result.output
+    assert 'The download was discarded' in result.output
+
+
 @pytest.mark.usefixtures('generation')
 def test_generation_without_the_stems_extra_stops(
     runner: CliRunner, tmp_path: Path, mocker: MockerFixture
@@ -1035,6 +1073,25 @@ def test_publishing_without_the_github_cli_stops(
     )
     assert result.exit_code != 0
     assert 'GitHub CLI' in result.output
+
+
+def test_publishing_copies_what_it_cannot_link(
+    runner: CliRunner, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    directory = tmp_path / 'checkpoints'
+    directory.mkdir()
+    for name in (CHART_WEIGHTS, OFFSET_WEIGHTS):
+        (directory / name).write_bytes(b'0' * 2048)
+    mocker.patch('shutil.which', return_value='/usr/bin/gh')
+    mocker.patch('subprocess.run')
+    mocker.patch('os.link', side_effect=OSError)
+    copy = mocker.patch('shutil.copyfile')
+    result = runner.invoke(
+        main,
+        ['publish', '-c', str(directory), '-r', 'someone/weights', '-m', str(tmp_path / 'sums')],
+    )
+    assert result.exit_code == 0, result.output
+    assert copy.call_count == 2
 
 
 def test_a_failed_upload_is_reported(
