@@ -180,12 +180,14 @@ neʻfs
 nkük
 nlؼua
 nonexistent
+noone
 noqa
 norecursedirs
 notarytool
 notedata
 nullglob
 numpy
+numpydoc
 nȽpy
 nںab
 nܺvu
@@ -207,6 +209,7 @@ pipx
 platformdirs
 plistlib
 polyfit
+popen
 preapproved
 previewvid
 prodvers

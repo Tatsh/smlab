@@ -282,7 +282,7 @@ class ChartWindows(Dataset[dict[str, torch.Tensor]]):
         return self._rng
 
     @override
-    def __getitem__(self, index: int) -> dict[str, torch.Tensor]:  # noqa: PLR0914
+    def __getitem__(self, index: int) -> dict[str, torch.Tensor]:  # ruff: ignore[too-many-locals]
         """
         Return one training window.
 

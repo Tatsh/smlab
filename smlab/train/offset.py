@@ -137,7 +137,7 @@ def build_envelope_cache(records: Sequence[dict[str, object]], destination: Path
             continue
         try:
             samples = load_audio(audio)
-        except Exception:  # noqa: BLE001
+        except Exception:  # ruff: ignore[blind-except]
             log.info('Could not read `%s`.', audio)
             continue
         if len(samples) < _MIN_SECONDS * params.sample_rate:

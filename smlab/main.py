@@ -885,7 +885,7 @@ def _load_chart_model(
     default=None,
     help='Pattern vocabulary to use. Uses the bundled one when omitted.',
 )
-def generate(  # noqa: PLR0917
+def generate(  # ruff: ignore[too-many-positional-arguments]
     audio: Path,
     output_dir: Path,
     title: str,
@@ -911,14 +911,14 @@ def generate(  # noqa: PLR0917
     warp_slip: float,
     shift_beats: float,
     latency: float,
-    image: bool,  # noqa: FBT001
-    svg: bool,  # noqa: FBT001
+    image: bool,  # ruff: ignore[boolean-type-hint-positional-argument]
+    svg: bool,  # ruff: ignore[boolean-type-hint-positional-argument]
     balance: float,
     crossovers: float | None,
     fmt: Format,
-    triplets: bool,  # noqa: FBT001
-    mines: bool,  # noqa: FBT001
-    rolls: bool,  # noqa: FBT001
+    triplets: bool,  # ruff: ignore[boolean-type-hint-positional-argument]
+    mines: bool,  # ruff: ignore[boolean-type-hint-positional-argument]
+    rolls: bool,  # ruff: ignore[boolean-type-hint-positional-argument]
     holds: float,
     density: float,
     temperature: float,
@@ -931,7 +931,7 @@ def generate(  # noqa: PLR0917
     vocabulary: Path | None,
 ) -> None:
     # A Raises section for click.Abort would show up verbatim in --help.
-    """Generate a song folder holding a simfile and a copy of the audio."""  # noqa: DOC501
+    """Generate a song folder holding a simfile and a copy of the audio."""  # ruff: ignore[docstring-missing-exception]
     if weights_repo:
         os.environ[REPOSITORY_VARIABLE] = weights_repo
     if weights_tag:
@@ -1119,7 +1119,7 @@ def _upload(repository: str, tag: str, files: Sequence[Path]) -> None:
 def publish(
     checkpoints: Path, manifest: Path, repository: str | None, release: str | None, *, dry_run: bool
 ) -> None:
-    """Upload trained weights so an installed copy can download them."""  # noqa: DOC501
+    """Upload trained weights so an installed copy can download them."""  # ruff: ignore[docstring-missing-exception]
     target = repository or weights_repository()
     tag = release or weights_release()
     present = tuple((name, checkpoints / name) for name in (CHART_WEIGHTS, OFFSET_WEIGHTS))
@@ -1196,7 +1196,7 @@ def drift_command(
     by saying where it moves. Pass what this prints back to `generate` as --warp. Where the beat
     jumps rather than changing speed, which is what an edit in the audio looks like, it says so and
     no warp will help.
-    """  # noqa: DOC501
+    """  # ruff: ignore[docstring-missing-exception]
     if bpm <= 0:
         estimate = estimate_timing(audio)
         bpm = estimate['bpm']
@@ -1246,7 +1246,7 @@ def drift_command(
 )
 @click.option('--svg/--png', default=False, help='Draw as SVG instead of PNG.')
 def image_command(simfile: Path, output: Path | None, *, svg: bool) -> None:
-    """Draw an existing simfile's charts as pictures."""  # noqa: DOC501
+    """Draw an existing simfile's charts as pictures."""  # ruff: ignore[docstring-missing-exception]
     parsed = load_simfile(simfile)
     charts = parsed.singles()
     if not charts or parsed.timing is None:
@@ -1281,7 +1281,7 @@ def image_command(simfile: Path, output: Path | None, *, svg: bool) -> None:
 @main.command()
 @click.argument('simfile', type=click.Path(exists=True, dir_okay=False, path_type=Path))
 def analyze(simfile: Path) -> None:
-    """Report timing and physical demands of an existing simfile."""  # noqa: DOC501
+    """Report timing and physical demands of an existing simfile."""  # ruff: ignore[docstring-missing-exception]
     parsed = load_simfile(simfile)
     if (timing := parsed.timing) is None:
         click.echo('No usable timing.', err=True)

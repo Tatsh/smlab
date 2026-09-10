@@ -81,7 +81,7 @@ def load_separator(device: torch.device) -> Separator:
         If demucs is not installed.
     """
     try:
-        from demucs.pretrained import get_model  # noqa: PLC0415
+        from demucs.pretrained import get_model  # ruff: ignore[import-outside-top-level]
     except ImportError as error:
         msg = 'Install the stems extra to separate audio: pip install smlab[stems]'
         raise SeparationError(msg) from error
@@ -112,7 +112,7 @@ def separate(model: Separator, path: Path, device: torch.device) -> dict[str, ND
     SeparationError
         If the audio cannot be read or separated.
     """
-    from demucs.apply import apply_model  # noqa: PLC0415
+    from demucs.apply import apply_model  # ruff: ignore[import-outside-top-level]
 
     rate = model.samplerate
     try:

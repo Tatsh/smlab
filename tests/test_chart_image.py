@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
-import xml.etree.ElementTree as ET  # noqa: S405
+import xml.etree.ElementTree as ET  # ruff: ignore[suspicious-xml-etree-import]
 
 from PIL import Image, ImageFont
 
@@ -19,7 +19,7 @@ _HEADING = Heading('Song', 'Hard', 9, 120.0)
 
 
 def _parse(document: str) -> ET.Element:
-    return ET.fromstring(document)  # noqa: S314
+    return ET.fromstring(document)  # ruff: ignore[suspicious-xml-element-tree-usage]
 
 
 def _arrow_color(root: ET.Element) -> str | None:

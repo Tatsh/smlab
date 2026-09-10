@@ -26,7 +26,7 @@ from typing import override
 import math
 
 from torch import nn
-from torch.nn import functional as F  # noqa: N812
+from torch.nn import functional as F  # ruff: ignore[lowercase-imported-as-non-lowercase]
 import torch
 
 from .chart import DIFFICULTIES

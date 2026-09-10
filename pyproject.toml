@@ -3,7 +3,7 @@ build-backend = "hatchling.build"
 requires = ["hatchling"]
 
 [dependency-groups]
-dev = ["commitizen>=4.18.0", "cz-path>=0.0.7", "mypy>=2.3.1", "ruff>=0.16.4", "ty>=0.0.74"]
+dev = ["commitizen>=4.18.0", "cz-path>=0.0.7", "mypy>=2.3.1", "ruff==0.16.6", "ty>=0.0.78"]
 docs = [
   "autodoc-pydantic>=2.2.0",
   "doc8>=2.0.0",
@@ -40,7 +40,7 @@ classifiers = [
 ]
 dependencies = [
   "bascom>=0.2.0",
-  "click>=8.4.2",
+  "click>=8.5.0",
   "typing-extensions>=4.16.0",
   "librosa>=1.0.0",
   "mutagen>=1.48.1",
@@ -170,7 +170,6 @@ cache-dir = "~/.cache/ruff"
 force-exclude = true
 line-length = 100
 namespace-packages = ["docs", "tests"]
-output-prefer-rule-codes = true
 target-version = "py312"
 unsafe-fixes = true
 
@@ -183,21 +182,18 @@ quote-style = "single"
 [tool.ruff.lint]
 extend-select = ["ALL"]
 ignore = [
-  "ANN401",
-  "COM812",
-  "CPY001",
-  "D203",
-  "D204",
-  "D212",
-  "N818",
-  "Q000",
-  "Q003",
-  "RUF105",
-  "RUF106",
-  "RUF201",
-  "S404",
-  "S603",
-  "TD002",
+  "bad-quotes-inline-string",
+  "avoidable-escaped-quote",
+  "any-type",
+  "error-suffix-on-exception-name",
+  "incorrect-blank-line-after-class",
+  "incorrect-blank-line-before-class",
+  "missing-copyright-notice",
+  "missing-todo-author",
+  "missing-trailing-comma",
+  "multi-line-summary-first-line",
+  "subprocess-without-shell-equals-true",
+  "suspicious-subprocess-import",
 ]
 preview = true
 
@@ -223,8 +219,7 @@ max-complexity = 20
 extend-ignore-names = ["test_*"]
 
 [tool.ruff.lint.per-file-ignores]
-"smlab/main.py" = ["PLR0913"]
-"tests/conftest.py" = ["pytest-fixture-autouse"]
+"smlab/main.py" = ["too-many-arguments"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"

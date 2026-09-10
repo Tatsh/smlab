@@ -219,7 +219,7 @@ def _evaluate(
     }
 
 
-def train_chart_model(  # noqa: PLR0914
+def train_chart_model(  # ruff: ignore[too-many-locals]
     cache_root: Path,
     records: list[SongRecord],
     vocabulary: Vocabulary,

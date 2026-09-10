@@ -166,7 +166,7 @@ def encode_song(
     return torch.cat(encoded, dim=0), logits
 
 
-def generate_rows(  # noqa: PLR0914
+def generate_rows(  # ruff: ignore[too-many-locals]
     model: ChartModel,
     vocabulary: Vocabulary,
     features: NDArray[np.float16],

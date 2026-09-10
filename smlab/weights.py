@@ -365,7 +365,7 @@ def _stream(url: str, handle: int, name: str, progress: ProgressCallback | None)
     """
     with (
         os.fdopen(handle, 'wb') as file,
-        urllib.request.urlopen(url, timeout=_TIMEOUT) as response,  # noqa: S310
+        urllib.request.urlopen(url, timeout=_TIMEOUT) as response,  # ruff: ignore[suspicious-url-open-usage]
     ):
         total = int(response.headers.get('Content-Length') or 0)
         received = reported = 0
