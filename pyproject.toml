@@ -3,7 +3,7 @@ build-backend = "hatchling.build"
 requires = ["hatchling"]
 
 [dependency-groups]
-dev = ["commitizen>=4.18.0", "cz-path>=0.0.7", "mypy>=2.3.1", "ruff==0.16.7", "ty>=0.0.78"]
+dev = ["commitizen>=4.19.0", "cz-path>=0.0.7", "mypy>=2.3.1", "ruff==0.16.9", "ty>=0.0.84"]
 docs = [
   "autodoc-pydantic>=2.2.0",
   "doc8>=2.0.0",
@@ -13,14 +13,14 @@ docs = [
   "sphinx-click>=6.2.0",
   "sphinx-datatables>=1.0.0",
   "sphinx-immaterial>=0.13.9",
-  "sphinx>=9.1.0; python_version >= \"3.13\"",
+  "sphinx>=9.1.0; python_version >= \"3.13\""
 ]
 tests = [
   "coveralls>=4.1.0",
   "mock>=5.2.0",
   "pytest-cov>=7.1.0",
   "pytest-mock>=3.15.1",
-  "pytest>=9.1.1",
+  "pytest>=9.1.1"
 ]
 
 [project]
@@ -36,7 +36,7 @@ classifiers = [
   "Topic :: Games/Entertainment",
   "Topic :: Multimedia :: Sound/Audio :: Analysis",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
-  "Typing :: Typed",
+  "Typing :: Typed"
 ]
 dependencies = [
   "bascom>=0.2.0",
@@ -49,7 +49,7 @@ dependencies = [
   "platformdirs>=4.11.3",
   "scipy>=1.18.0",
   "soundfile>=0.14.0",
-  "torch>=2.11.0",
+  "torch>=2.11.0"
 ]
 description = "Generate StepMania dance-single charts from audio using machine learning."
 keywords = [
@@ -58,7 +58,7 @@ keywords = [
   "dance dance revolution",
   "machine learning",
   "simfile",
-  "stepmania",
+  "stepmania"
 ]
 license = "MIT"
 name = "smlab"
@@ -96,7 +96,7 @@ version_files = [
   "package.json",
   "sh.tat.smlab.yml",
   "smlab/__init__.py",
-  "snapcraft.yaml",
+  "snapcraft.yaml"
 ]
 version_provider = "pep621"
 
@@ -108,7 +108,7 @@ omit = [
   "tests.py",
   "tests/*/test_*.py",
   "tests/test_*.py",
-  "smlab/typing.py",
+  "smlab/typing.py"
 ]
 show_missing = true
 
@@ -120,7 +120,7 @@ omit = [
   "tests.py",
   "tests/*/test_*.py",
   "tests/test_*.py",
-  "smlab/typing.py",
+  "smlab/typing.py"
 ]
 
 [tool.doc8]
@@ -193,7 +193,7 @@ ignore = [
   "missing-trailing-comma",
   "multi-line-summary-first-line",
   "subprocess-without-shell-equals-true",
-  "suspicious-subprocess-import",
+  "suspicious-subprocess-import"
 ]
 preview = true
 
@@ -239,6 +239,6 @@ default-groups = "all"
 environments = [
   "sys_platform == 'linux'",
   "sys_platform == 'darwin' and platform_machine == 'arm64'",
-  "sys_platform == 'win32'",
+  "sys_platform == 'win32'"
 ]
 exclude-newer = "1 week"

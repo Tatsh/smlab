@@ -2,6 +2,7 @@
 *.log
 *.npy
 *.npz
+*.tsbuildinfo
 *~
 .*.swp
 .*_cache/

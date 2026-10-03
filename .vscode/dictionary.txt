@@ -338,7 +338,6 @@ winget
 wiswa
 wiswa's
 wiټj
-worktree
 wzмk
 wùot
 xcrun
