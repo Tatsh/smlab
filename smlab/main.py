@@ -20,7 +20,7 @@ import torch
 
 from .audio import audio_duration, load_audio
 from .chart import DIFFICULTIES
-from .chart.gen import generate_rows, song_features
+from .chart.gen import generate_rows, separate_song, song_features
 from .chart.image import Heading, write_chart
 from .corpus import EXCLUDED_PACKS, scan_corpus, write_manifest
 from .dataset import CODE_BY_CHAR, SUBDIVISIONS_PER_BEAT, beat_features
@@ -36,12 +36,12 @@ from .generate import (
     target_nps,
 )
 from .heads import ChartModel
-from .offset import OffsetModel, refine_offset
+from .offset import HALF_BEAT_RIVALRY_WARNING, OffsetModel, refine_offset
 from .playability import Style, analyze_rows
 from .preview import DEFAULT_SAMPLE_LENGTH, PreviewModel, predict_sample_start
 from .resources import CHECKSUM_ASSET, PREVIEW_ASSET, load_state_dict, load_vocabulary
 from .simfile import load_simfile
-from .stems import SeparationError, load_separator
+from .stems import SeparationError, load_separator, separation_device
 from .stems.cache import build_stem_cache
 from .tags import apply_tags
 from .tempo import estimate_timing
@@ -75,6 +75,9 @@ from .writer import Format, SongMetadata, write_song
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+
+    from numpy.typing import NDArray
+    import numpy as np
 
 __all__ = (
     'DEFAULT_METERS',
@@ -350,6 +353,7 @@ def _resolve_timing(
     warps: tuple[Warp | None, ...] = (),
     warp_slip: float = DEFAULT_TOLERANCE,
     phase_model: OffsetModel | None = None,
+    drums: NDArray[np.float32] | None = None,
 ) -> TimingData:
     """
     Settle on the tempo and offset to chart against.
@@ -376,6 +380,8 @@ def _resolve_timing(
     phase_model : OffsetModel or None
         Model used to place the downbeat, or ``None`` to keep the offset the tempo estimator
         produced.
+    drums : :py:class:`~numpy.ndarray` | None
+        Separated drum stem, whose kick places the beat when it is clear enough.
 
     Returns
     -------
@@ -403,12 +409,28 @@ def _resolve_timing(
                 f'{timing.offset:+.4f} (confidence {estimate["confidence"]:.2f}).'
             )
     # The tempo estimator picks its phase by taking the loudest point of a folded envelope, which is
-    # not where a downbeat is. Given the tempo, the phase model decides that separately and far
-    # better, so it replaces the offset whenever one was not supplied outright.
+    # not where a downbeat is. Given the tempo, the kick and the phase model decide that separately
+    # and far better, so they replace the offset whenever one was not supplied outright.
     if phase_model is not None and offset is None:
-        found, weight = refine_offset(phase_model, audio, timing.primary_bpm)
-        timing = TimingData.constant(timing.primary_bpm, found)
-        click.echo(f'Placed the downbeat at offset {found:+.4f} (confidence {weight:.2f}).')
+        found = refine_offset(phase_model, audio, timing.primary_bpm, drums)
+        timing = TimingData.constant(timing.primary_bpm, found.offset)
+        if found.source == 'kick':
+            click.echo(
+                f'Placed the beat on the kick at offset {found.offset:+.4f} '
+                f'(clarity {found.clarity:.1f}).'
+            )
+        else:
+            click.echo(
+                f'Placed the downbeat at offset {found.offset:+.4f} '
+                f'(confidence {found.weight:.2f}).'
+            )
+        if found.rivalry >= HALF_BEAT_RIVALRY_WARNING and not shift_beats:
+            click.echo(
+                f'The position half a beat away scored {found.rivalry:.0%} as well as the one '
+                'chosen. If the steps land between the beats, generate again with '
+                '--shift-beats 0.5.',
+                err=True,
+            )
     if not math.isclose(multiply, 1.0):
         # Scaling the tempo leaves beat zero where it is, so the offset carries over untouched and
         # only the grid spacing changes.
@@ -937,6 +959,14 @@ def generate(  # ruff: ignore[too-many-positional-arguments]
     if weights_tag:
         os.environ[RELEASE_VARIABLE] = weights_tag
     model, vocab, device = _load_chart_model(checkpoints, vocabulary)
+    separating_on = separation_device()
+    try:
+        separator = load_separator(separating_on)
+    except SeparationError as error:
+        click.echo(f'{error}', err=True)
+        raise click.Abort from error
+    click.echo('Separating into ' + ', '.join(separator.sources) + '.')
+    stems = separate_song(separator, audio, separating_on)
     timing = _resolve_timing(
         audio,
         bpm,
@@ -947,14 +977,9 @@ def generate(  # ruff: ignore[too-many-positional-arguments]
         warps,
         warp_slip,
         _load_offset_model(checkpoints),
+        stems.get('drums'),
     )
-    try:
-        separator = load_separator(device)
-    except SeparationError as error:
-        click.echo(f'{error}', err=True)
-        raise click.Abort from error
-    click.echo('Separating into ' + ', '.join(separator.sources) + '.')
-    features = song_features(separator, audio, timing, device)
+    features = song_features(stems, audio, timing)
     charts = []
     for index, (name, own_rating) in enumerate(difficulty):
         rating = own_rating or meter or default_meter(name, int(scale))
