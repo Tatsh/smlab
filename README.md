@@ -60,15 +60,15 @@ analysis, chart drawing.
 
 ## Automatically generated fields
 
-| Field                         | How it is chosen                                                                                                                          |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `#BPMS`                       | Folded onset envelope over a 25 s excerpt. Override with `--bpm`, or `--bpm-multiplier 2` when detection lands an octave low.             |
-| `#OFFSET`                     | A model that reads four frequency bands folded onto the bar and picks which of 96 positions holds the downbeat. Override with `--offset`. |
-| `#TITLE`, `#ARTIST`, `#GENRE` | Read from the audio tags when not given. MP3, Ogg, FLAC, M4A, and Opus.                                                                   |
-| `#SAMPLESTART`                | Predicted by a model that scores every measure and picks one.                                                                             |
-| `#SAMPLELENGTH`               | Fixed at 15 s, which 83% of the corpus uses.                                                                                              |
-| `#CREDIT`                     | The current username.                                                                                                                     |
-| Steps                         | Placement and selection models, decoded under physical constraints.                                                                       |
+| Field                         | How it is chosen                                                                                                                                                                                                                                            |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `#BPMS`                       | Folded onset envelope over a 25 s excerpt, refined against the whole song and rounded only when the round value fits as well. Override with `--bpm`, or `--bpm-multiplier 2` when detection lands an octave low.                                            |
+| `#OFFSET`                     | The kick in the separated drum stem places the beat, and a model reading four frequency bands folded onto the bar picks which beat is the downbeat. The model places the beat itself when the kick is weak and disagrees with it. Override with `--offset`. |
+| `#TITLE`, `#ARTIST`, `#GENRE` | Read from the audio tags when not given. MP3, Ogg, FLAC, M4A, and Opus.                                                                                                                                                                                     |
+| `#SAMPLESTART`                | Predicted by a model that scores every measure and picks one.                                                                                                                                                                                               |
+| `#SAMPLELENGTH`               | Fixed at 15 s, which 83% of the corpus uses.                                                                                                                                                                                                                |
+| `#CREDIT`                     | The current username.                                                                                                                                                                                                                                       |
+| Steps                         | Placement and selection models, decoded under physical constraints.                                                                                                                                                                                         |
 
 ## Accuracy
 
@@ -81,19 +81,25 @@ was recovered correctly.
 | Offset within 30 ms             | 58.1%                  | 46.2%              |
 | Offset, median error            | 20.5 ms                | 45.5 ms            |
 | Offset a clean half-beat out    | 2.2%                   | 12.9%              |
-| **Tempo and offset both right** | **50.9% of all songs** | —                  |
+| **Tempo and offset both right** | **50.9% of all songs** | n/a                |
 
 The median offset error of 20.5 ms is one phase bin, so it is limited by the model's resolution
 rather than its judgement.
+
+The table predates kick placement and whole-song tempo refinement. Measured since on 30
+hand-made charts, the 25 songs whose tempo was found had no offset half a beat out, and the grid
+stayed within 0.14 beats of the authored one from start to finish.
 
 **Check the detected timing before trusting a chart.** Roughly one song in eight gets the wrong
 tempo, and for those the grid is wrong however good the offset is. The `confidence` figure printed
 alongside the detection is a usable signal: values near 1.0 mean the winning tempo barely beat the
 runner-up.
 
-Two knobs exist for the common failures:
+Three knobs exist for the common failures:
 
 - `--bpm-multiplier 2` when the tempo comes out halved, `0.5` when doubled.
+- `--shift-beats 0.5` when the steps land between the beats. `generate` prints a warning when no
+  clear kick placed the beat and the offset model found the half-beat position nearly as likely.
 - `--latency 0.060` when every chart is consistently early or late on your setup, since playback
   latency is a property of the machine rather than the song. `SMLAB_LATENCY` sets it once.
 
@@ -101,7 +107,7 @@ Two knobs exist for the common failures:
 
 A rating means nothing without knowing its scale, so `--scale` picks one: `10` for classic DDR,
 `15` for In The Groove, `20` for X-era and later (the default). The same number differs sharply
-across them — a nine is 4.33 notes per second in ITG, 4.10 on the classic scale, and 3.12 on the
+across them. A nine is 4.33 notes per second in ITG, 4.10 on the classic scale, and 3.12 on the
 modern one.
 
 ```shell
@@ -109,18 +115,18 @@ smlab generate song.ogg -D Hard -D "Challenge:16" --scale 20
 ```
 
 Each difficulty takes an optional rating after a colon; `-m` sets one for any that do not. Because
-the classic scale saturates — corpus charts labelled ten run anywhere from 3.5 to 6.9 notes per
-second — `--nps` bypasses the rating and states the note rate outright.
+the classic scale saturates (corpus charts labelled ten run anywhere from 3.5 to 6.9 notes per
+second), `--nps` bypasses the rating and states the note rate outright.
 
 ## Keyboard charts versus pad charts
 
 `--style` decides what the generator is allowed to write, and the same analysis is available for
 existing files through `smlab analyze`.
 
-- `feet` — danceable with two feet. Nothing needs more than two panels at once, no panel repeats
+- `feet`: danceable with two feet. Nothing needs more than two panels at once, no panel repeats
   faster than a foot can retap, and the note rate stays within human stamina.
-- `hands` — additionally allows the three and four panel chords common in In The Groove.
-- `keyboard` — no physical limits, and a separate density scale, because a keyboard chart at a given
+- `hands`: additionally allows the three and four panel chords common in In The Groove.
+- `keyboard`: no physical limits, and a separate density scale, because a keyboard chart at a given
   rating runs roughly twice as dense as a pad chart carrying the same number.
 
 The classifier decides by three separate measures: whether a two-foot assignment exists at all
@@ -208,8 +214,8 @@ uv run ruff format . && uv run ruff check . && uv run mypy smlab && uv run pytes
 ```
 
 torch is taken from PyPI, whose Linux wheels already carry CUDA, so a machine with an NVIDIA driver
-uses the GPU without any extra configuration. To build against something else — ROCm, a different
-CUDA release, or CPU only - install that variant over the top:
+uses the GPU without any extra configuration. To build against something else (ROCm, a different
+CUDA release, or CPU only), install that variant over the top:
 
 ```shell
 uv pip install --torch-backend=rocm6.4 torch

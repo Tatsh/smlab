@@ -22,7 +22,7 @@ of every song teaches it something about every phase.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, Literal, NamedTuple, override
 
 from torch import nn
 import librosa
@@ -39,10 +39,18 @@ if TYPE_CHECKING:
 __all__ = (
     'BEATS_PER_MEASURE',
     'EXCERPT_SECONDS',
+    'HALF_BEAT_RIVALRY_WARNING',
+    'KICK_CLARITY',
+    'KICK_LAG_SECONDS',
     'PHASE_BINS',
+    'KickEstimate',
+    'OffsetEstimate',
     'OffsetModel',
+    'PhaseEstimate',
     'band_envelopes',
     'fold_profile',
+    'half_beat_rivalry',
+    'kick_phase',
     'offset_for_phase',
     'phase_of_offset',
     'predict_phase',
@@ -79,12 +87,47 @@ that mislead.
 
 These have to be genuine slices. Passing ``fmax`` alone to a flux detector gives nested low-pass
 bands rather than disjoint ones, and asking for a full mel filterbank below 150 Hz produces filters
-so narrow that every one of them is empty — a band that is identically zero and contributes nothing
-at all, which is what the first version of this did.
+so narrow that every one of them is empty. The first version of this did that, and its band was
+identically zero.
+
+:meta hide-value:
+"""
+HALF_BEAT_RIVALRY_WARNING = 0.5
+"""
+Rivalry at or above which the downbeat may be half a beat out.
+
+Over twelve songs, most scored near 0.1, and two a player found half a beat out scored 0.69 and
+1.24. A song the model places half a beat out with confidence scores low and is not caught.
+
+:meta hide-value:
+"""
+KICK_CLARITY = 10.0
+"""
+Kick clarity below which the offset model may overrule the kick.
+
+Clarity is the folded kick's peak over its median. Over 52 songs with known timing, the kick was
+half a beat out on two, at clarities of 6.0 and 7.9, and the model preferred the other position
+both times. The two songs on which the kick was right and the model half a beat out had clarities
+of 13.6 and 26.6.
+
+:meta hide-value:
+"""
+KICK_LAG_SECONDS = 0.0259
+"""
+Delay from where the folded kick peaks to where chart authors place the beat.
+
+Measured over 30 hand-made charts. With it removed the kick lands a median 3.5 ms from the authored
+beat, against 15.9 ms for the offset model.
 
 :meta hide-value:
 """
 _BANDS = len(BAND_EDGES) - 1
+_NEARBY_BINS = 2
+"""Bins either side of a position counted as the same answer."""
+_KICK_BINS = 96
+"""Positions within one beat the kick is folded onto before its peak is interpolated."""
+_NO_KICK_CLARITY = 2.0
+"""Clarity below which there is no kick to follow, since a flat fold scores near one."""
 _CHANNELS = 64
 _KERNEL = 5
 _DILATIONS = (1, 2, 4, 8, 16)
@@ -97,6 +140,44 @@ that would be guessing.
 
 :meta hide-value:
 """
+
+
+class PhaseEstimate(NamedTuple):
+    """The bar position chosen for the downbeat and how firmly it was chosen."""
+
+    phase: int
+    """Bin in ``[0, PHASE_BINS)`` the downbeat occupies."""
+    rivalry: float
+    """Weight half a beat from the chosen position as a share of the weight around it."""
+    weight: float
+    """Share of the averaged distribution the chosen bin has."""
+
+
+class KickEstimate(NamedTuple):
+    """Where the kick drum lands within the beat and how clearly it stands out."""
+
+    clarity: float
+    """Peak of the folded kick over its median."""
+    seconds: float
+    """Position of the beat within one beat period, in seconds, with the kick's lag removed."""
+
+
+class OffsetEstimate(NamedTuple):
+    """An offset and how firmly it was chosen."""
+
+    clarity: float
+    """Clarity of the kick, or zero when no drum stem was given."""
+    offset: float
+    """The ``#OFFSET`` value."""
+    rivalry: float
+    """
+    The phase model's weight half a beat from the chosen position as a share of the weight around
+    it, or zero when a clear kick chose the position.
+    """
+    source: Literal['kick', 'model']
+    """Whether the kick or the phase model placed the beat."""
+    weight: float
+    """Share of the averaged distribution the chosen bin has, a rough confidence."""
 
 
 def band_envelopes(
@@ -177,6 +258,96 @@ def fold_profile(
     profile -= profile.mean(axis=1, keepdims=True)
     spread = np.maximum(np.abs(profile).max(axis=1, keepdims=True), 1e-6)
     return np.asarray(profile / spread, dtype=np.float32)
+
+
+def half_beat_rivalry(weights: NDArray[np.floating], phase: int) -> float:
+    """
+    Compare the weight half a beat from a position with the weight around the position itself.
+
+    Weights are pooled across the beats of the bar first. Placing the downbeat on the wrong beat
+    still puts every step on a beat, and only the half-beat error is audible.
+
+    Parameters
+    ----------
+    weights : :py:class:`~numpy.ndarray`
+        Distribution over the ``PHASE_BINS`` bar positions.
+    phase : int
+        The chosen bin.
+
+    Returns
+    -------
+    float
+        Zero when the half-beat position has no weight, and one or more when it has as much as the
+        chosen position.
+    """
+    per_beat = PHASE_BINS // BEATS_PER_MEASURE
+    within_beat = np.asarray(weights, dtype=np.float64).reshape(BEATS_PER_MEASURE, per_beat)
+    pooled = within_beat.sum(axis=0)
+    held = _mass_near(pooled, phase % per_beat)
+    return _mass_near(pooled, phase % per_beat + per_beat // 2) / max(held, 1e-9)
+
+
+def kick_phase(
+    drums: NDArray[np.float32], bpm: float, params: OnsetParams | None = None
+) -> KickEstimate:
+    """
+    Find where the kick drum lands within the beat.
+
+    The lowest band of a separated drum stem is the kick with the bass removed. Folding the full
+    mix instead lets a bassline pumping on the off-beats outvote the kick.
+
+    Parameters
+    ----------
+    drums : :py:class:`~numpy.ndarray`
+        Mono drum stem at the sample rate of ``params``.
+    bpm : float
+        Tempo.
+    params : OnsetParams | None
+        Envelope settings, or ``None`` for the defaults.
+
+    Returns
+    -------
+    KickEstimate
+        The beat's position within one period and how clearly the kick marks it.
+    """
+    settings = params if params is not None else OnsetParams()
+    kick = band_envelopes(drums, settings)[0].astype(np.float64)
+    period = 60.0 / bpm
+    times = np.arange(kick.size, dtype=np.float64) / settings.frame_rate
+    bins = np.floor((times % period) / period * _KICK_BINS).astype(np.int64) % _KICK_BINS
+    counts = np.maximum(np.bincount(bins, minlength=_KICK_BINS), 1)
+    folded = np.bincount(bins, weights=kick, minlength=_KICK_BINS) / counts
+    peak = int(np.argmax(folded))
+    before = folded[(peak - 1) % _KICK_BINS]
+    after = folded[(peak + 1) % _KICK_BINS]
+    denominator = before - 2.0 * folded[peak] + after
+    shift = 0.0 if denominator == 0 else 0.5 * (before - after) / denominator
+    seconds = ((peak + 0.5 + shift) / _KICK_BINS * period - KICK_LAG_SECONDS) % period
+    return KickEstimate(
+        clarity=float(folded[peak] / max(float(np.median(folded)), 1e-9)), seconds=float(seconds)
+    )
+
+
+def _mass_near(values: NDArray[np.float64], centre: int, reach: int = _NEARBY_BINS) -> float:
+    """
+    Sum the values within some bins of a position, wrapping around the ends.
+
+    Parameters
+    ----------
+    values : :py:class:`~numpy.ndarray`
+        Values over a cycle of positions.
+    centre : int
+        The position.
+    reach : int
+        Bins either side of the position to include.
+
+    Returns
+    -------
+    float
+        The summed values.
+    """
+    spread = np.arange(centre - reach, centre + reach + 1)
+    return float(np.take(values, spread, mode='wrap').sum())
 
 
 def phase_of_offset(offset: float, bpm: float) -> int:
@@ -274,7 +445,7 @@ def predict_phase(
     frame_rate: float,
     bpm: float,
     excerpt_seconds: float = EXCERPT_SECONDS,
-) -> tuple[int, float]:
+) -> PhaseEstimate:
     """
     Choose the bar position the downbeat occupies.
 
@@ -298,8 +469,43 @@ def predict_phase(
 
     Returns
     -------
-    tuple[int, float]
-        The chosen bin and how much of the averaged distribution it holds.
+    PhaseEstimate
+        The chosen bin, its share of the averaged distribution, and its half-beat rivalry.
+    """
+    weights = _phase_weights(model, envelopes, frame_rate, bpm, excerpt_seconds)
+    phase = int(np.argmax(weights))
+    return PhaseEstimate(
+        phase=phase, rivalry=half_beat_rivalry(weights, phase), weight=float(weights[phase])
+    )
+
+
+def _phase_weights(
+    model: OffsetModel,
+    envelopes: NDArray[np.float32],
+    frame_rate: float,
+    bpm: float,
+    excerpt_seconds: float = EXCERPT_SECONDS,
+) -> NDArray[np.float64]:
+    """
+    Average the model's distribution over bar positions across excerpts of the song.
+
+    Parameters
+    ----------
+    model : OffsetModel
+        The trained model.
+    envelopes : :py:class:`~numpy.ndarray`
+        Band envelopes for the song.
+    frame_rate : float
+        Envelope frames per second.
+    bpm : float
+        Tempo.
+    excerpt_seconds : float
+        Seconds each excerpt covers.
+
+    Returns
+    -------
+    :py:class:`~numpy.ndarray`
+        One weight per bar position, summing to one.
     """
     span = max(int(excerpt_seconds * frame_rate), 1)
     starts = list(range(0, max(envelopes.shape[1] - span, 1), span))
@@ -310,13 +516,20 @@ def predict_phase(
     ])
     with torch.no_grad():
         logits = model(torch.from_numpy(stacked).to(device))
-        weights = torch.softmax(logits.float(), dim=1).mean(dim=0).cpu().numpy()
-    return int(np.argmax(weights)), float(np.max(weights))
+        return np.asarray(
+            torch.softmax(logits.float(), dim=1).mean(dim=0).cpu().numpy(), dtype=np.float64
+        )
 
 
-def refine_offset(model: OffsetModel, audio: Path, bpm: float) -> tuple[float, float]:
+def refine_offset(
+    model: OffsetModel, audio: Path, bpm: float, drums: NDArray[np.float32] | None = None
+) -> OffsetEstimate:
     """
     Recover the offset for a song whose tempo is already known.
+
+    A clear kick places the beat, and the model chooses which beat of the bar is the downbeat. The
+    model places the beat itself when there is no drum stem, no kick in it, or a weak kick the model
+    disagrees with by half a beat.
 
     Parameters
     ----------
@@ -326,15 +539,44 @@ def refine_offset(model: OffsetModel, audio: Path, bpm: float) -> tuple[float, f
         Audio file to read.
     bpm : float
         Tempo, which fixes the bar length the phase is measured against.
+    drums : :py:class:`~numpy.ndarray` | None
+        Separated drum stem at the default sample rate, or ``None`` to rely on the model.
 
     Returns
     -------
-    tuple[float, float]
-        The offset and how much of the averaged distribution its bin holds, which is a rough
-        confidence.
+    OffsetEstimate
+        The offset, what placed it, and how firmly.
     """
     params = OnsetParams()
     samples = load_audio(audio, sample_rate=params.sample_rate)
-    envelopes = band_envelopes(samples, params)
-    phase, weight = predict_phase(model, envelopes, params.frame_rate, bpm)
-    return offset_for_phase(phase, bpm), weight
+    weights = _phase_weights(model, band_envelopes(samples, params), params.frame_rate, bpm)
+    phase = int(np.argmax(weights))
+    from_model = OffsetEstimate(
+        clarity=0.0,
+        offset=offset_for_phase(phase, bpm),
+        rivalry=half_beat_rivalry(weights, phase),
+        source='model',
+        weight=float(weights[phase]),
+    )
+    if drums is None:
+        return from_model
+    kick = kick_phase(drums, bpm, params)
+    per_beat = PHASE_BINS // BEATS_PER_MEASURE
+    period = 60.0 / bpm
+    kick_bin = int(kick.seconds / period * per_beat) % per_beat
+    disagreement = half_beat_rivalry(weights, kick_bin)
+    if kick.clarity < KICK_CLARITY and (disagreement > 1.0 or kick.clarity < _NO_KICK_CLARITY):
+        return from_model._replace(clarity=kick.clarity)
+    # The model's weight anywhere within a beat counts towards that beat, so its choice of bar still
+    # applies when its own placement within the beat is off.
+    beat = max(
+        range(BEATS_PER_MEASURE),
+        key=lambda b: _mass_near(weights, kick_bin + b * per_beat, per_beat // 2 - 1),
+    )
+    return OffsetEstimate(
+        clarity=kick.clarity,
+        offset=-(kick.seconds + beat * period),
+        rivalry=0.0 if kick.clarity >= KICK_CLARITY else disagreement,
+        source='kick',
+        weight=float(weights[(kick_bin + beat * per_beat) % PHASE_BINS]),
+    )

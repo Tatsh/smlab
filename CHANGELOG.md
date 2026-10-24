@@ -9,6 +9,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [unreleased]
 
+### Added
+
+- `generate` warns when the offset model scored the position half a beat away nearly as high as
+  the downbeat it chose, and suggests `--shift-beats 0.5`.
+- `generate` places the beat on the kick drum of the separated drum stem, and keeps the offset
+  model for choosing the downbeat and for songs without a clear kick.
+- Separation runs on Apple GPUs (MPS) when CUDA is absent.
+
+### Fixed
+
+- Detected tempi were always rounded to a whole or half BPM, and charts for songs at other tempi
+  drifted by up to half a beat. The tempo is now refined against the whole song and rounded only
+  when the round value fits as well.
+
 ## [0.0.1] - 2026-08-31
 
 First version.

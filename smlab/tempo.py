@@ -10,16 +10,16 @@ onset strength at the beat phase. That picks the right *octave*: a grid at twice
 necessarily samples the weak off-beats as well, which drags its mean down, whereas a grid at half
 the true tempo merely ties and is separated by a log-normal tempo prior.
 
-Precision matters more than it first appears — an error of 0.05 BPM at 150 BPM drifts by 67 ms
-across a three-minute track, worse than the offset error being chased — but the fold is already
-precise enough. Its grid steps by 0.2 per cent, 0.28 BPM at 140, and measured against songs whose
-tempo it identifies correctly it lands within 0.192 BPM in the worst case and 0.064 at the median,
-against a half-BPM tolerance.
+Precision matters more than it first appears. An error of 0.05 BPM at 150 BPM drifts by 67 ms
+across a three-minute track, worse than the offset error being chased. The fold's grid steps by 0.2
+per cent, 0.28 BPM at 140, which was enough only while every estimate was rounded to the nearest
+half beat per minute, and a recording at a fractional tempo then drifted by up to half a beat.
 
-An earlier version sharpened it anyway, taking the Fourier peak within one per cent of the fold's
-pick. Over two held-out halves that stage fixed no song and broke fourteen, dropping accuracy from
-98.6 to 84.3 per cent: with nothing left to gain it could only wander off a tempo that was already
-right. It is gone.
+The coarse pick is therefore refined by how well a grid at each nearby tempo holds on the onsets
+across the whole song, which lands within about 0.01 BPM of the reference on songs whose tempo the
+fold identifies. An earlier sharpening stage took the Fourier peak within one per cent of the
+fold's pick instead, and over two held-out halves it fixed no song and broke fourteen. That stage
+searched a far wider window and scored only periodicity, not alignment, and it is gone.
 
 The phase, which is what ``#OFFSET`` encodes, is recovered here only as a fallback.
 :py:mod:`smlab.offset` does it properly.
@@ -35,7 +35,7 @@ all constant-tempo songs, because a 25-second window resolves the tempo only 88 
 and a song holds twenty of them. Deciding the windows jointly, by a Viterbi pass over the tempo grid
 with a penalty for changing, is markedly better: at a 5 per cent false-split rate it finds a change
 in 40 per cent of songs that have one, against 10 per cent for grouping. It is still not enough. On
-the most favourable population — two to four clean tempi, no gimmicks — it recovers every tempo and
+the most favourable population (two to four clean tempi, no gimmicks) it recovers every tempo and
 no extras in 5.3 per cent of cases and returns a partial answer in 84.
 
 A partial answer is the worst outcome available. A chart pinned to one wrong tempo drifts
@@ -122,6 +122,23 @@ song.
 """
 _SNAP_DIVISOR = 2.0
 """Snapping resolution, where two gives whole and half beats per minute."""
+_SNAP_SLACK = 0.25
+"""
+Share of whole-song alignment a round tempo may lose and still be preferred.
+
+Half beats per minute are close enough together that every estimate is within the snapping
+tolerance of one. Rounding is therefore decided by fit: a recording at a tempo that is not round
+drifts off the grid at the round value and loses alignment across the song.
+
+Over 30 songs authored at whole tempi the round tempo kept at least 89 per cent of the refined
+alignment, and over 20 sped-up recordings at fractional tempi it kept at most 49 per cent.
+"""
+_FINE_SPAN = 0.003
+"""Relative distance either side of the coarse pick searched across the whole song."""
+_FINE_STEPS = 61
+"""Candidates in the first whole-song pass, spaced 0.01 per cent apart."""
+_FINEST_STEPS = 21
+"""Candidates in the second pass, spanning one step of the first."""
 _FOLD_BINS = 64
 """Phase bins used when folding the envelope for coarse tempo scoring."""
 _PHASE_SUBDIVISIONS = 8
@@ -244,6 +261,118 @@ def _sample_envelope(
     return np.interp(times * frame_rate, frames, envelope, left=0.0, right=0.0)
 
 
+def _phase_totals(
+    envelope: NDArray[np.float64], frame_rate: float, period: float
+) -> NDArray[np.float64]:
+    """
+    Accumulate onset strength along beat grids at every phase within one period.
+
+    Parameters
+    ----------
+    envelope : :py:class:`~numpy.ndarray`
+        The onset strength envelope.
+    frame_rate : float
+        Envelope frames per second.
+    period : float
+        Beat period in seconds.
+
+    Returns
+    -------
+    :py:class:`~numpy.ndarray`
+        Mean onset strength per beat for each phase step, or an empty array when the envelope is
+        shorter than one period.
+    """
+    duration = len(envelope) / frame_rate
+    if period <= 0 or duration <= period:
+        return np.zeros(0, dtype=np.float64)
+    steps = max(int(period * frame_rate * _PHASE_SUBDIVISIONS), 32)
+    phases = np.linspace(0.0, period, steps, endpoint=False)
+    beats = np.arange(int(duration / period), dtype=np.float64)
+    times = phases[:, None] + beats[None, :] * period
+    sampled = _sample_envelope(envelope, times.ravel(), frame_rate).reshape(times.shape)
+    return np.asarray(sampled.mean(axis=1), dtype=np.float64)
+
+
+def _alignment(envelope: NDArray[np.float64], frame_rate: float, bpm: float) -> float:
+    """
+    Score how well one tempo holds a beat grid on the onsets across the whole envelope.
+
+    Parameters
+    ----------
+    envelope : :py:class:`~numpy.ndarray`
+        The onset strength envelope.
+    frame_rate : float
+        Envelope frames per second.
+    bpm : float
+        Tempo to score.
+
+    Returns
+    -------
+    float
+        Mean onset strength on the best-placed grid, or zero when no grid fits.
+    """
+    totals = _phase_totals(envelope, frame_rate, 60.0 / bpm)
+    return float(totals.max()) if totals.size else 0.0
+
+
+def _refine_tempo(envelope: NDArray[np.float64], frame_rate: float, coarse: float) -> float:
+    """
+    Sharpen a coarse tempo against the whole envelope rather than an excerpt.
+
+    The coarse search folds a short excerpt, which cannot tell apart tempi that drift less than a
+    bin across it. Across the whole song the same error accumulates into a visible loss of
+    alignment, which is what separates them here.
+
+    Parameters
+    ----------
+    envelope : :py:class:`~numpy.ndarray`
+        The onset strength envelope.
+    frame_rate : float
+        Envelope frames per second.
+    coarse : float
+        Tempo from the coarse search.
+
+    Returns
+    -------
+    float
+        The best-aligned tempo near the coarse one.
+    """
+    best = coarse
+    width = _FINE_SPAN
+    for steps in (_FINE_STEPS, _FINEST_STEPS):
+        candidates = best * (1.0 + np.linspace(-width, width, steps))
+        scores = [_alignment(envelope, frame_rate, float(bpm)) for bpm in candidates]
+        best = float(candidates[int(np.argmax(scores))])
+        width = 2.0 * width / (steps - 1)
+    return best
+
+
+def _fit_round_tempo(envelope: NDArray[np.float64], frame_rate: float, bpm: float) -> float:
+    """
+    Prefer the nearby round tempo when it aligns with the song as well as the refined one.
+
+    Parameters
+    ----------
+    envelope : :py:class:`~numpy.ndarray`
+        The onset strength envelope.
+    frame_rate : float
+        Envelope frames per second.
+    bpm : float
+        The refined tempo.
+
+    Returns
+    -------
+    float
+        The round tempo when it fits, otherwise the refined one.
+    """
+    candidate = snap_bpm(bpm)
+    if candidate == bpm:
+        return bpm
+    refined = _alignment(envelope, frame_rate, bpm)
+    rounded = _alignment(envelope, frame_rate, candidate)
+    return candidate if rounded >= refined * (1.0 - _SNAP_SLACK) else bpm
+
+
 def _refine_phase(envelope: NDArray[np.float64], frame_rate: float, period: float) -> float:
     """
     Find the beat phase that maximises accumulated onset strength.
@@ -266,14 +395,10 @@ def _refine_phase(envelope: NDArray[np.float64], frame_rate: float, period: floa
     float
         The best phase within one period, in seconds.
     """
-    duration = len(envelope) / frame_rate
-    if period <= 0 or duration <= period:
+    totals = _phase_totals(envelope, frame_rate, period)
+    if not totals.size:
         return 0.0
-    steps = max(int(period * frame_rate * _PHASE_SUBDIVISIONS), 32)
-    phases = np.linspace(0.0, period, steps, endpoint=False)
-    beats = np.arange(int(duration / period), dtype=np.float64)
-    times = phases[:, None] + beats[None, :] * period
-    totals = _sample_envelope(envelope, times.ravel(), frame_rate).reshape(times.shape).sum(axis=1)
+    steps = totals.size
     peak = int(np.argmax(totals))
     before = totals[(peak - 1) % steps]
     after = totals[(peak + 1) % steps]
@@ -338,7 +463,8 @@ def estimate_tempo(
     coarse = float(tempi[int(np.argmax(scores))])
     ordered = np.sort(scores)[::-1]
     confidence = float(ordered[0] / ordered[1]) if ordered.size > 1 and ordered[1] > 0 else 0.0
-    return snap_bpm(coarse), confidence
+    refined = _refine_tempo(envelope, frame_rate, coarse)
+    return _fit_round_tempo(envelope, frame_rate, refined), confidence
 
 
 def estimate_timing_from_envelopes(

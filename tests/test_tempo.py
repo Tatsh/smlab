@@ -97,19 +97,30 @@ def test_timing_puts_beat_zero_on_the_first_pulse() -> None:
 
 
 def test_a_supplied_tempo_is_what_the_phase_is_fitted_against() -> None:
-    # Snapping rounds a tempo like this to 128.0, and a phase fitted at 128.0 describes a
-    # different grid: over a long song the two drift apart and the offset lands half the drift
-    # out. The supplied tempo has to reach the fit, not merely replace its answer afterwards.
     phase = 0.25
     envelope = _pulses(bpm=128.199, seconds=120.0, phase=phase)
-    envelopes = Envelopes(phase=envelope, tempo=envelope)
-    fitted = estimate_timing_from_envelopes(envelopes, _RATE, bpm=128.199)
+    fitted = estimate_timing_from_envelopes(
+        Envelopes(phase=envelope, tempo=envelope), _RATE, bpm=128.199
+    )
     assert fitted['bpm'] == pytest.approx(128.199)
     assert -fitted['offset'] == pytest.approx(phase - ONSET_LATENCY_SECONDS, abs=0.02)
-    # Left to itself the search snaps to a round number, and the offset moves with it.
-    searched = estimate_timing_from_envelopes(envelopes, _RATE)
-    assert searched['bpm'] == pytest.approx(128.0)
-    assert searched['offset'] != pytest.approx(fitted['offset'], abs=0.02)
+
+
+def test_a_tempo_that_is_not_round_is_kept() -> None:
+    # Across two minutes 128.0 drifts a third of a beat off pulses at 128.199, so rounding would
+    # cost far more alignment than it is allowed to.
+    phase = 0.25
+    envelope = _pulses(bpm=128.199, seconds=120.0, phase=phase)
+    searched = estimate_timing_from_envelopes(Envelopes(phase=envelope, tempo=envelope), _RATE)
+    assert searched['bpm'] == pytest.approx(128.199, abs=0.01)
+    assert -searched['offset'] == pytest.approx(phase - ONSET_LATENCY_SECONDS, abs=0.02)
+
+
+def test_a_round_tempo_is_found_exactly() -> None:
+    bpm, _ = estimate_tempo(
+        _pulses(bpm=150.0, seconds=120.0).astype(np.float64), _RATE, min_bpm=60.0, max_bpm=300.0
+    )
+    assert bpm == pytest.approx(150.0)
 
 
 def test_a_supplied_tempo_reports_no_confidence() -> None:
