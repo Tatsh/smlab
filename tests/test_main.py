@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 import json
 import subprocess as sp
 
@@ -25,7 +25,7 @@ from smlab.main import (
     default_meter,
     main,
 )
-from smlab.offset import OffsetModel
+from smlab.offset import OffsetEstimate, OffsetModel
 from smlab.resources import CHECKSUM_ASSET
 from smlab.simfile import load_simfile
 from smlab.stems import STEM_NAMES, SeparationError
@@ -1151,14 +1151,36 @@ def test_a_rating_that_is_not_a_rating_is_refused(
     assert 'is not a rating' in result.output
 
 
+@pytest.mark.parametrize(
+    ('source', 'rivalry', 'extra', 'placed', 'warned'),
+    [
+        ('model', 0.1, (), 'Placed the downbeat at offset -0.1230', False),
+        ('model', 0.9, (), 'Placed the downbeat at offset -0.1230', True),
+        ('model', 0.9, ('--shift-beats', '0.5'), 'Placed the downbeat at offset -0.1230', False),
+        ('kick', 0.0, (), 'Placed the beat on the kick at offset -0.1230 (clarity 17.5)', False),
+    ],
+)
 def test_a_trained_offset_model_places_the_downbeat(
-    runner: CliRunner, tmp_path: Path, mocker: MockerFixture
+    runner: CliRunner,
+    tmp_path: Path,
+    mocker: MockerFixture,
+    source: Literal['kick', 'model'],
+    rivalry: float,
+    extra: tuple[str, ...],
+    placed: str,
+    *,
+    warned: bool,
 ) -> None:
     # Folding picks its phase from the loudest point of the envelope, which is not where a downbeat
     # is, so the model replaces that offset.
     mocker.patch('smlab.main.EncoderConfig', return_value=_SMALL)
     mocker.patch('smlab.main.load_vocabulary', return_value=_VOCABULARY)
-    mocker.patch('smlab.main.refine_offset', return_value=(-0.123, 0.9))
+    mocker.patch(
+        'smlab.main.refine_offset',
+        return_value=OffsetEstimate(
+            clarity=17.5, offset=-0.123, rivalry=rivalry, source=source, weight=0.9
+        ),
+    )
     mocker.patch('smlab.main.OffsetModel', return_value=_offset_model())
     mocker.patch('smlab.main.resolve_weights', return_value=tmp_path / 'offset.pt')
     mocker.patch('torch.load', return_value={'model': _offset_model().state_dict()})
@@ -1194,10 +1216,12 @@ def test_a_trained_offset_model_places_the_downbeat(
             'Easy',
             '--nps',
             '2',
+            *extra,
         ],
     )
     assert result.exit_code == 0, result.output
-    assert 'Placed the downbeat at offset -0.1230' in result.output
+    assert placed in result.output
+    assert ('--shift-beats 0.5.' in result.output) is warned
 
 
 def test_weights_that_will_not_load_leave_the_offset_alone(

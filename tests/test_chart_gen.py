@@ -9,7 +9,7 @@ import pytest
 import soundfile as sf  # type: ignore[import-untyped]  # No stubs are published.
 import torch
 
-from smlab.chart.gen import encode_song, generate_rows, song_features
+from smlab.chart.gen import encode_song, generate_rows, separate_song, song_features
 from smlab.dataset import SUBDIVISIONS_PER_BEAT
 from smlab.encoder import MEASURE_SLOTS, EncoderConfig
 from smlab.features import FINE_SUBDIVISIONS, TOTAL_CHANNELS
@@ -86,7 +86,7 @@ def test_a_song_is_separated_onto_the_fine_grid(tmp_path: Path, mocker: MockerFi
         'smlab.chart.gen.separate',
         return_value=dict.fromkeys(STEM_NAMES, np.zeros(_RATE * 4, dtype=np.float32)),
     )
-    features = song_features(_Separator(), audio, _TIMING, _CPU)
+    features = song_features(separate_song(_Separator(), audio, _CPU), audio, _TIMING)
     assert features.shape[1] == TOTAL_CHANNELS
     # Four seconds at 150 BPM is ten beats, sampled at the fine resolution.
     assert features.shape[0] == pytest.approx(10 * FINE_SUBDIVISIONS, abs=FINE_SUBDIVISIONS)

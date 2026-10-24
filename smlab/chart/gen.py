@@ -40,6 +40,7 @@ from smlab.stems import separate
 from .data import WINDOW_STEPS
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from pathlib import Path
 
     from numpy.typing import NDArray
@@ -49,7 +50,7 @@ if TYPE_CHECKING:
     from smlab.timing import TimingData
     from smlab.vocab import Vocabulary
 
-__all__ = ('encode_song', 'generate_rows', 'song_features')
+__all__ = ('encode_song', 'generate_rows', 'separate_song', 'song_features')
 
 log = logging.getLogger(__name__)
 
@@ -74,11 +75,11 @@ notes off the sixteenth grid altogether.
 """
 
 
-def song_features(
-    separator: Separator, audio: Path, timing: TimingData, device: torch.device
-) -> NDArray[np.float16]:
+def separate_song(
+    separator: Separator, audio: Path, device: torch.device
+) -> dict[str, NDArray[np.float32]]:
     """
-    Separate a song and build its fine-grid features.
+    Separate a song into stems at the sample rate its features are built at.
 
     Parameters
     ----------
@@ -86,24 +87,47 @@ def song_features(
         The stem separation model.
     audio : :py:class:`~pathlib.Path`
         Audio file to read.
-    timing : TimingData
-        Timing used to map beats onto times.
     device : :py:class:`~torch.device`
         Device separation runs on.
+
+    Returns
+    -------
+    dict[str, :py:class:`~numpy.ndarray`]
+        Mono stems keyed by name.
+    """
+    stems = separate(separator, audio, device)
+    rate = separator.samplerate
+    return {
+        name: np.asarray(
+            librosa.resample(samples, orig_sr=rate, target_sr=DEFAULT_SAMPLE_RATE),
+            dtype=np.float32,
+        )
+        for name, samples in stems.items()
+    }
+
+
+def song_features(
+    stems: Mapping[str, NDArray[np.float32]], audio: Path, timing: TimingData
+) -> NDArray[np.float16]:
+    """
+    Build a separated song's fine-grid features.
+
+    Parameters
+    ----------
+    stems : Mapping[str, :py:class:`~numpy.ndarray`]
+        Stems from :py:func:`separate_song`.
+    audio : :py:class:`~pathlib.Path`
+        Audio file the stems were separated from.
+    timing : TimingData
+        Timing used to map beats onto times.
 
     Returns
     -------
     :py:class:`~numpy.ndarray`
         Features shaped ``(fine_slots, channels)``.
     """
-    stems = separate(separator, audio, device)
-    rate = separator.samplerate
-    resampled = {
-        name: librosa.resample(samples, orig_sr=rate, target_sr=DEFAULT_SAMPLE_RATE)
-        for name, samples in stems.items()
-    }
     mixture, _ = librosa.load(str(audio), sr=DEFAULT_SAMPLE_RATE, mono=True)
-    return fine_features(resampled, np.asarray(mixture, dtype=np.float32), timing)
+    return fine_features(dict(stems), np.asarray(mixture, dtype=np.float32), timing)
 
 
 def encode_song(
