@@ -10,7 +10,13 @@ import pytest
 import soundfile as sf  # type: ignore[import-untyped]  # No stubs are published.
 import torch
 
-from smlab.stems import STEM_NAMES, SeparationError, load_separator, separate
+from smlab.stems import (
+    STEM_NAMES,
+    SeparationError,
+    load_separator,
+    separate,
+    separation_device,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -51,6 +57,18 @@ def test_the_model_is_loaded_onto_the_device(mocker: MockerFixture) -> None:
     get_model = mocker.patch('demucs.pretrained.get_model', return_value=_Model())
     assert load_separator(_CPU).samplerate == _RATE
     get_model.assert_called_once_with('htdemucs')
+
+
+@pytest.mark.parametrize(
+    ('cuda', 'mps', 'wanted'),
+    [(True, True, 'cuda'), (False, True, 'mps'), (False, False, 'cpu')],
+)
+def test_separation_prefers_the_fastest_device(
+    mocker: MockerFixture, *, cuda: bool, mps: bool, wanted: str
+) -> None:
+    mocker.patch('torch.cuda.is_available', return_value=cuda)
+    mocker.patch('torch.backends.mps.is_available', return_value=mps)
+    assert separation_device().type == wanted
 
 
 def test_a_missing_extra_is_reported_as_a_separation_error(mocker: MockerFixture) -> None:

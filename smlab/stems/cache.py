@@ -16,7 +16,6 @@ import logging
 
 import librosa
 import numpy as np
-import torch
 
 from smlab.audio import DEFAULT_SAMPLE_RATE
 from smlab.cache import cache_path_for
@@ -25,12 +24,13 @@ from smlab.dataset import chart_targets
 from smlab.features import TOTAL_CHANNELS, fine_features
 from smlab.simfile import SimfileError, load_simfile
 
-from .separate import SeparationError, load_separator, separate
+from .separate import SeparationError, load_separator, separate, separation_device
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
     from numpy.typing import NDArray
+    import torch
 
     from smlab.typing import SongRecord
 
@@ -144,7 +144,7 @@ def build_stem_cache(
         The simfile path and whether an entry was written for it.
     """
     root.mkdir(parents=True, exist_ok=True)
-    chosen = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    chosen = device or separation_device()
     model = load_separator(chosen)
     log.info('Separating into %s on %s.', ', '.join(model.sources), chosen)
 

@@ -9,6 +9,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [unreleased]
 
+### Added
+
+- Separation runs on Apple GPUs (MPS) when CUDA is absent.
+
 ## [0.0.1] - 2026-08-31
 
 First version.
