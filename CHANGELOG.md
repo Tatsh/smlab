@@ -13,6 +13,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Separation runs on Apple GPUs (MPS) when CUDA is absent.
 
+### Fixed
+
+- Detected tempi were always rounded to a whole or half BPM, and charts for songs at other tempi
+  drifted by up to half a beat. The tempo is now refined against the whole song and rounded only
+  when the round value fits as well.
+
 ## [0.0.1] - 2026-08-31
 
 First version.
