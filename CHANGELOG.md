@@ -13,7 +13,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - `generate` places the beat on the kick drum of the separated drum stem, and keeps the offset
   model for choosing the downbeat and for songs without a clear kick.
-- Separation runs on Apple GPUs (MPS) when CUDA is absent.
+- `generate` separates on Apple GPUs (MPS) when CUDA is absent. The training stem cache still uses
+  CUDA or the CPU.
+
+### Changed
+
+- `song_features` takes the stems from the new `separate_song` instead of a separator and device.
+- `refine_offset` returns an `OffsetEstimate` (`clarity`, `offset`, `source`, `weight`) instead of
+  an `(offset, weight)` tuple, so unpacking it into two names raises `ValueError`. It takes an
+  optional drum stem.
+- `predict_phase` returns a `PhaseEstimate` named tuple. Its two fields are the bin and weight it
+  returned before, so unpacking it still works.
 
 ### Fixed
 

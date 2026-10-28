@@ -35,7 +35,7 @@ all constant-tempo songs, because a 25-second window resolves the tempo only 88 
 and a song holds twenty of them. Deciding the windows jointly, by a Viterbi pass over the tempo grid
 with a penalty for changing, is markedly better: at a 5 per cent false-split rate it finds a change
 in 40 per cent of songs that have one, against 10 per cent for grouping. It is still not enough. On
-the most favourable population (two to four clean tempi, no gimmicks) it recovers every tempo and
+the most favourable population — two to four clean tempi, no gimmicks — it recovers every tempo and
 no extras in 5.3 per cent of cases and returns a partial answer in 84.
 
 A partial answer is the worst outcome available. A chart pinned to one wrong tempo drifts

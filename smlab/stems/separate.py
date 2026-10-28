@@ -70,10 +70,10 @@ class Separator(Protocol):
 
 def separation_device() -> torch.device:
     """
-    Choose the fastest device available for separation.
+    Choose the fastest device available for separating a song to generate a chart from.
 
-    Apple GPUs are included here and not for the chart model. On a Mac, separating on MPS ran four
-    times faster than on the CPU and placed the kick identically.
+    On a Mac, separating on MPS ran four times faster than on the CPU and placed the kick
+    identically. Only generation was checked on MPS, so the training cache does not use this.
 
     Returns
     -------

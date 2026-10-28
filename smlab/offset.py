@@ -86,8 +86,8 @@ that mislead.
 
 These have to be genuine slices. Passing ``fmax`` alone to a flux detector gives nested low-pass
 bands rather than disjoint ones, and asking for a full mel filterbank below 150 Hz produces filters
-so narrow that every one of them is empty. The first version of this did that, and its band was
-identically zero.
+so narrow that every one of them is empty — a band that is identically zero and contributes nothing
+at all, which is what the first version of this did.
 
 :meta hide-value:
 """
@@ -104,10 +104,10 @@ of 13.6 and 26.6.
 """
 KICK_LAG_SECONDS = 0.0259
 """
-Delay from where the folded kick peaks to where chart authors place the beat.
+How far the folded kick's peak trails where chart authors place the beat.
 
-Measured over 30 hand-made charts. With it removed the kick lands a median 3.5 ms from the authored
-beat, against 15.9 ms for the offset model.
+Calibrated at the default onset settings, over 30 hand-made charts. With it removed the kick lands a
+median 3.5 ms from the authored beat, against 15.9 ms for the offset model.
 
 :meta hide-value:
 """
@@ -270,9 +270,7 @@ def half_beat_rivalry(weights: NDArray[np.floating], phase: int) -> float:
     return _mass_near(pooled, phase % per_beat + per_beat // 2) / max(held, 1e-9)
 
 
-def kick_phase(
-    drums: NDArray[np.float32], bpm: float, params: OnsetParams | None = None
-) -> KickEstimate:
+def kick_phase(drums: NDArray[np.float32], bpm: float) -> KickEstimate:
     """
     Find where the kick drum lands within the beat.
 
@@ -282,18 +280,16 @@ def kick_phase(
     Parameters
     ----------
     drums : :py:class:`~numpy.ndarray`
-        Mono drum stem at the sample rate of ``params``.
+        Mono drum stem at the default sample rate.
     bpm : float
         Tempo.
-    params : OnsetParams | None
-        Envelope settings, or ``None`` for the defaults.
 
     Returns
     -------
     KickEstimate
         The beat's position within one period and how clearly the kick marks it.
     """
-    settings = params if params is not None else OnsetParams()
+    settings = OnsetParams()
     kick = band_envelopes(drums, settings)[0].astype(np.float64)
     period = 60.0 / bpm
     times = np.arange(kick.size, dtype=np.float64) / settings.frame_rate
@@ -540,7 +536,7 @@ def refine_offset(
     )
     if drums is None:
         return from_model
-    kick = kick_phase(drums, bpm, params)
+    kick = kick_phase(drums, bpm)
     per_beat = PHASE_BINS // BEATS_PER_MEASURE
     period = 60.0 / bpm
     kick_bin = int(kick.seconds / period * per_beat) % per_beat
