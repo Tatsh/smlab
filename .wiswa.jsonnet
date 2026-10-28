@@ -52,6 +52,13 @@ local utils = import 'utils.libsonnet';
     '/checkpoints/',
     '/out/',
   ],
+  package_json+: {
+    cspell+: {
+      // uv marks its sdist cache with an empty .git file, and cspell treats that as a repository
+      // root, so the ignore rule above does not apply beneath it.
+      ignorePaths+: ['%s/**' % uv_cache_dir],
+    },
+  },
   // Checkpoints are binary but are shipped, so they stay out of shared_ignore.
   prettierignore+: ['*.pt', '*.sha256'],
   pyproject+: {

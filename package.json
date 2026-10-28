@@ -29,7 +29,8 @@
       ".vscode/extensions.json",
       ".wiswa-ci/**",
       "dist/**",
-      "man/**"
+      "man/**",
+      ".uv-cache/**"
     ],
     "language": "en-GB",
     "languageSettings": [
