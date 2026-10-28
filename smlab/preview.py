@@ -126,7 +126,11 @@ class PreviewModel(nn.Module):
         self.head = nn.Linear(2 * hidden, 1)
 
     @override
-    def forward(self, features: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+    def forward(  # ty: ignore[invalid-mutable-override]
+        self,
+        features: torch.Tensor,
+        mask: torch.Tensor,
+    ) -> torch.Tensor:
         """
         Score each measure.
 

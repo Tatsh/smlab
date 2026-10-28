@@ -77,7 +77,7 @@ class PlacementHead(nn.Module):
         self.register_buffer('prior', torch.from_numpy(prior if prior is not None else empty))
 
     @override
-    def forward(
+    def forward(  # ty: ignore[invalid-mutable-override]
         self, encoded: torch.Tensor, position: torch.Tensor, weight: float = 1.0
     ) -> torch.Tensor:
         """
@@ -139,7 +139,11 @@ class SelectionHead(nn.Module):
         self.output = nn.Linear(width, vocabulary)
 
     @override
-    def forward(self, encoded: torch.Tensor, batch: SelectionBatch) -> torch.Tensor:
+    def forward(  # ty: ignore[invalid-mutable-override]
+        self,
+        encoded: torch.Tensor,
+        batch: SelectionBatch,
+    ) -> torch.Tensor:
         """
         Score the pattern of each step.
 

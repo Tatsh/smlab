@@ -400,7 +400,10 @@ class OffsetModel(nn.Module):
         self.stack = nn.Sequential(*layers)
 
     @override
-    def forward(self, profile: torch.Tensor) -> torch.Tensor:
+    def forward(  # ty: ignore[invalid-mutable-override]
+        self,
+        profile: torch.Tensor,
+    ) -> torch.Tensor:
         """
         Score every bar position.
 
