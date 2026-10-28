@@ -1,8 +1,8 @@
 {
   "_wiswa": {
-    "commandLine": "wiswa -q --skip-remote --cache-time 86400",
-    "lastRun": "2026-10-03T00:23:53Z",
-    "version": "4bb9fe2"
+    "commandLine": "wiswa -d",
+    "lastRun": "2026-10-28T21:22:03Z",
+    "version": "d669750"
   },
   "contributors": ["Andrew Udvare <audvare@gmail.com>"],
   "cspell": {
@@ -44,11 +44,11 @@
   "devDependencies": {
     "@prettier/plugin-xml": "^3.4.2",
     "cspell": "^10.4.0",
-    "markdownlint-cli2": "^0.23.3",
+    "markdownlint-cli2": "^0.24.0",
     "prettier": "^3.9.10",
     "prettier-plugin-ini": "^1.3.0",
     "prettier-plugin-sort-json": "^4.2.0",
-    "prettier-plugin-toml": "^3.0.2",
+    "prettier-plugin-toml": "^4.1.0",
     "pyright": "^1.1.414"
   },
   "files": ["LICENSE.txt", "README.md", "man/smlab.1"],

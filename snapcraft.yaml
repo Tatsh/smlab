@@ -22,7 +22,8 @@ parts:
     plugin: 'python'
     python-packages:
       - '.'
-    source: '.'
+    source: 'https://github.com/Tatsh/smlab.git'
+    source-tag: 'v0.0.1'
     stage-packages: []
 platforms:
   amd64:

@@ -1,12 +1,4 @@
-*.1
-*.3
-*.7
-*.desktop
-*.j2
-*.jsonnet
 *.kate-swp
-*.libsonnet
-*.lock
 *.log
 *.min.js
 *.npy
@@ -21,7 +13,6 @@
 .coverage
 .cspellcache
 .directory
-.eslintignore
 .pnp.*
 .shellcheckrc
 /.bash_profile

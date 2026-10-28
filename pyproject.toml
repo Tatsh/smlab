@@ -3,7 +3,7 @@ build-backend = "hatchling.build"
 requires = ["hatchling"]
 
 [dependency-groups]
-dev = ["commitizen>=4.19.0", "cz-path>=0.0.7", "mypy>=2.3.1", "ruff==0.16.9", "ty>=0.0.84"]
+dev = ["commitizen>=4.19.2", "cz-path>=0.0.7", "mypy>=2.4.0", "ruff==0.17.1", "ty>=0.0.90"]
 docs = [
   "autodoc-pydantic>=2.2.0",
   "doc8>=2.0.0",
@@ -13,13 +13,13 @@ docs = [
   "sphinx-click>=6.2.0",
   "sphinx-datatables>=1.0.0",
   "sphinx-immaterial>=0.13.9",
-  "sphinx>=9.1.0; python_version >= \"3.13\""
+  "sphinx>=9.2.0; python_version >= \"3.13\""
 ]
 tests = [
   "coveralls>=4.1.0",
   "mock>=5.2.0",
   "pytest-cov>=7.1.0",
-  "pytest-mock>=3.16.0",
+  "pytest-mock>=3.17.0",
   "pytest>=9.1.1"
 ]
 
