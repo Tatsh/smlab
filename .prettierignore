@@ -1,4 +1,5 @@
 *.kate-swp
+*.lock
 *.log
 *.min.js
 *.npy

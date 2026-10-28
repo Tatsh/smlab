@@ -61,7 +61,8 @@ local utils = import 'utils.libsonnet';
     },
   },
   // Checkpoints are binary but are shipped, so they stay out of shared_ignore.
-  prettierignore+: ['*.pt', '*.sha256'],
+  // prettier-plugin-toml parses uv.lock, and uv rewrites it in its own style on every lock.
+  prettierignore+: ['*.lock', '*.pt', '*.sha256'],
   pyproject+: {
     project+: {
       classifiers: utils.pyprojectClassifiers(top, [
