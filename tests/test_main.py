@@ -1152,12 +1152,10 @@ def test_a_rating_that_is_not_a_rating_is_refused(
 
 
 @pytest.mark.parametrize(
-    ('source', 'rivalry', 'extra', 'placed', 'warned'),
+    ('source', 'placed'),
     [
-        ('model', 0.1, (), 'Placed the downbeat at offset -0.1230', False),
-        ('model', 0.9, (), 'Placed the downbeat at offset -0.1230', True),
-        ('model', 0.9, ('--shift-beats', '0.5'), 'Placed the downbeat at offset -0.1230', False),
-        ('kick', 0.0, (), 'Placed the beat on the kick at offset -0.1230 (clarity 17.5)', False),
+        ('model', 'Placed the downbeat at offset -0.1230 (confidence 0.90)'),
+        ('kick', 'Placed the beat on the kick at offset -0.1230 (clarity 17.5)'),
     ],
 )
 def test_a_trained_offset_model_places_the_downbeat(
@@ -1165,11 +1163,7 @@ def test_a_trained_offset_model_places_the_downbeat(
     tmp_path: Path,
     mocker: MockerFixture,
     source: Literal['kick', 'model'],
-    rivalry: float,
-    extra: tuple[str, ...],
     placed: str,
-    *,
-    warned: bool,
 ) -> None:
     # Folding picks its phase from the loudest point of the envelope, which is not where a downbeat
     # is, so the model replaces that offset.
@@ -1177,9 +1171,7 @@ def test_a_trained_offset_model_places_the_downbeat(
     mocker.patch('smlab.main.load_vocabulary', return_value=_VOCABULARY)
     mocker.patch(
         'smlab.main.refine_offset',
-        return_value=OffsetEstimate(
-            clarity=17.5, offset=-0.123, rivalry=rivalry, source=source, weight=0.9
-        ),
+        return_value=OffsetEstimate(clarity=17.5, offset=-0.123, source=source, weight=0.9),
     )
     mocker.patch('smlab.main.OffsetModel', return_value=_offset_model())
     mocker.patch('smlab.main.resolve_weights', return_value=tmp_path / 'offset.pt')
@@ -1216,12 +1208,10 @@ def test_a_trained_offset_model_places_the_downbeat(
             'Easy',
             '--nps',
             '2',
-            *extra,
         ],
     )
     assert result.exit_code == 0, result.output
     assert placed in result.output
-    assert ('--shift-beats 0.5.' in result.output) is warned
 
 
 def test_weights_that_will_not_load_leave_the_offset_alone(

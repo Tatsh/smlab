@@ -11,8 +11,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- `generate` warns when the offset model scored the position half a beat away nearly as high as
-  the downbeat it chose, and suggests `--shift-beats 0.5`.
 - `generate` places the beat on the kick drum of the separated drum stem, and keeps the offset
   model for choosing the downbeat and for songs without a clear kick.
 - Separation runs on Apple GPUs (MPS) when CUDA is absent.

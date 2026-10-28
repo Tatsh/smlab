@@ -36,7 +36,7 @@ from .generate import (
     target_nps,
 )
 from .heads import ChartModel
-from .offset import HALF_BEAT_RIVALRY_WARNING, OffsetModel, refine_offset
+from .offset import OffsetModel, refine_offset
 from .playability import Style, analyze_rows
 from .preview import DEFAULT_SAMPLE_LENGTH, PreviewModel, predict_sample_start
 from .resources import CHECKSUM_ASSET, PREVIEW_ASSET, load_state_dict, load_vocabulary
@@ -423,13 +423,6 @@ def _resolve_timing(
             click.echo(
                 f'Placed the downbeat at offset {found.offset:+.4f} '
                 f'(confidence {found.weight:.2f}).'
-            )
-        if found.rivalry >= HALF_BEAT_RIVALRY_WARNING and not shift_beats:
-            click.echo(
-                f'The position half a beat away scored {found.rivalry:.0%} as well as the one '
-                'chosen. If the steps land between the beats, generate again with '
-                '--shift-beats 0.5.',
-                err=True,
             )
     if not math.isclose(multiply, 1.0):
         # Scaling the tempo leaves beat zero where it is, so the offset carries over untouched and

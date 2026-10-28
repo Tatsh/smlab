@@ -39,7 +39,6 @@ if TYPE_CHECKING:
 __all__ = (
     'BEATS_PER_MEASURE',
     'EXCERPT_SECONDS',
-    'HALF_BEAT_RIVALRY_WARNING',
     'KICK_CLARITY',
     'KICK_LAG_SECONDS',
     'PHASE_BINS',
@@ -92,15 +91,6 @@ identically zero.
 
 :meta hide-value:
 """
-HALF_BEAT_RIVALRY_WARNING = 0.5
-"""
-Rivalry at or above which the downbeat may be half a beat out.
-
-Over twelve songs, most scored near 0.1, and two a player found half a beat out scored 0.69 and
-1.24. A song the model places half a beat out with confidence scores low and is not caught.
-
-:meta hide-value:
-"""
 KICK_CLARITY = 10.0
 """
 Kick clarity below which the offset model may overrule the kick.
@@ -147,8 +137,6 @@ class PhaseEstimate(NamedTuple):
 
     phase: int
     """Bin in ``[0, PHASE_BINS)`` the downbeat occupies."""
-    rivalry: float
-    """Weight half a beat from the chosen position as a share of the weight around it."""
     weight: float
     """Share of the averaged distribution the chosen bin has."""
 
@@ -169,11 +157,6 @@ class OffsetEstimate(NamedTuple):
     """Clarity of the kick, or zero when no drum stem was given."""
     offset: float
     """The ``#OFFSET`` value."""
-    rivalry: float
-    """
-    The phase model's weight half a beat from the chosen position as a share of the weight around
-    it, or zero when a clear kick chose the position.
-    """
     source: Literal['kick', 'model']
     """Whether the kick or the phase model placed the beat."""
     weight: float
@@ -470,13 +453,11 @@ def predict_phase(
     Returns
     -------
     PhaseEstimate
-        The chosen bin, its share of the averaged distribution, and its half-beat rivalry.
+        The chosen bin and its share of the averaged distribution.
     """
     weights = _phase_weights(model, envelopes, frame_rate, bpm, excerpt_seconds)
     phase = int(np.argmax(weights))
-    return PhaseEstimate(
-        phase=phase, rivalry=half_beat_rivalry(weights, phase), weight=float(weights[phase])
-    )
+    return PhaseEstimate(phase=phase, weight=float(weights[phase]))
 
 
 def _phase_weights(
@@ -554,7 +535,6 @@ def refine_offset(
     from_model = OffsetEstimate(
         clarity=0.0,
         offset=offset_for_phase(phase, bpm),
-        rivalry=half_beat_rivalry(weights, phase),
         source='model',
         weight=float(weights[phase]),
     )
@@ -576,7 +556,6 @@ def refine_offset(
     return OffsetEstimate(
         clarity=kick.clarity,
         offset=-(kick.seconds + beat * period),
-        rivalry=0.0 if kick.clarity >= KICK_CLARITY else disagreement,
         source='kick',
         weight=float(weights[(kick_bin + beat * per_beat) % PHASE_BINS]),
     )
