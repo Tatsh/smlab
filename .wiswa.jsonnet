@@ -7,7 +7,7 @@ local utils = import 'utils.libsonnet';
   primary_module: 'smlab',
   description: 'Generate StepMania dance-single charts from audio using machine learning.',
   keywords: ['audio', 'command line', 'dance dance revolution', 'machine learning', 'simfile', 'stepmania'],
-  version: '0.0.1',
+  version: '0.1.0',
   want_main: true,
   want_flatpak: true,
   // Librosa requires 3.12.
@@ -16,6 +16,7 @@ local utils = import 'utils.libsonnet';
   // fall back on, so those two can only ever fail to build.
   supported_platforms: ['linux', 'macos-arm64', 'windows-x86_64'],
   publishing+: { flathub: 'sh.tat.smlab' },
+  security_policy_supported_versions: { '0.1.x': ':white_check_mark:' },
   // torch's Linux wheels carry the CUDA runtime, so a bundle that takes what PyPI serves builds
   // out to 2.7 GB, over GitHub's 2 GiB limit for a release asset. Every bundled format is
   // therefore held to the CPU wheels, which is a real limitation of them: a GPU is available to
