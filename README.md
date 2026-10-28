@@ -95,11 +95,9 @@ tempo, and for those the grid is wrong however good the offset is. The `confiden
 alongside the detection is a usable signal: values near 1.0 mean the winning tempo barely beat the
 runner-up.
 
-Three knobs exist for the common failures:
+Two knobs exist for the common failures:
 
 - `--bpm-multiplier 2` when the tempo comes out halved, `0.5` when doubled.
-- `--shift-beats 0.5` when the steps land between the beats. `generate` prints a warning when no
-  clear kick placed the beat and the offset model found the half-beat position nearly as likely.
 - `--latency 0.060` when every chart is consistently early or late on your setup, since playback
   latency is a property of the machine rather than the song. `SMLAB_LATENCY` sets it once.
 

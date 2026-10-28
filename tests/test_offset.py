@@ -148,7 +148,6 @@ def test_the_phase_is_averaged_over_several_excerpts() -> None:
     estimate = predict_phase(OffsetModel().eval(), envelopes, _RATE, _BPM)
     assert 0 <= estimate.phase < PHASE_BINS
     assert 0.0 < estimate.weight <= 1.0
-    assert estimate.rivalry >= 0.0
 
 
 def test_a_song_shorter_than_one_excerpt_still_predicts() -> None:
@@ -183,7 +182,6 @@ def test_a_clear_kick_overrules_a_model_half_a_beat_out(tmp_path: Path) -> None:
     assert (-found.offset - kick.seconds) / period == pytest.approx(
         round((-found.offset - kick.seconds) / period)
     )
-    assert found.rivalry == pytest.approx(0.0, abs=1e-12)
 
 
 def test_the_model_picks_which_beat_begins_the_bar(tmp_path: Path) -> None:
