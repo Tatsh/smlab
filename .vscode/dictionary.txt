@@ -137,6 +137,7 @@ launchable
 lextudio
 libera
 librosa
+librsvg
 libsonnet
 linalg
 linters
@@ -252,6 +253,7 @@ rqmtqn
 rqvtqw
 rrggbb
 rstcheck
+rsvg
 rܽsv
 sakura
 salieri
