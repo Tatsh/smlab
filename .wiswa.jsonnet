@@ -16,6 +16,9 @@ local utils = import 'utils.libsonnet';
   // fall back on, so those two can only ever fail to build.
   supported_platforms: ['linux', 'macos-arm64', 'windows-x86_64'],
   publishing+: { flathub: 'sh.tat.smlab' },
+  // Weights is hand-maintained. An installed copy downloads from the release matching its version,
+  // so neither PyPI nor the release may go out without the weights attached.
+  github+: { workflows+: { release_gate_workflows: ['Weights'] } },
   security_policy_supported_versions: { '0.1.x': ':white_check_mark:' },
   // torch's Linux wheels carry the CUDA runtime, so a bundle that takes what PyPI serves builds
   // out to 2.7 GB, over GitHub's 2 GiB limit for a release asset. Every bundled format is

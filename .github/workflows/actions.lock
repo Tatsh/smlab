@@ -64,6 +64,8 @@ workflows:
         - 'astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2'
         - 'coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329'
         - 'pavelzw/pytest-action@510c5e90c360a185039bea56ce8b3e7e51a16507'
+    '.github/workflows/weights.yml':
+        - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
 dependencies:
     'actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6':
         ref: 'v4.2.2'

@@ -60,7 +60,7 @@ jobs:
         run: |
           tag="$TAG"
           sha="$HEAD_SHA"
-          required_workflows=('AppImage' 'Flatpak' 'Publish' 'PyInstaller' 'Snap')
+          required_workflows=('AppImage' 'Flatpak' 'Publish' 'PyInstaller' 'Snap' 'Weights')
           optional_workflows=('Prettier' 'QA' 'Spelling' 'Tests' 'markdownlint')
           all_success=true
           process_workflow() {
@@ -180,5 +180,6 @@ name: 'Release'
       - 'Snap'
       - 'Spelling'
       - 'Tests'
+      - 'Weights'
       - 'markdownlint'
 permissions: {}

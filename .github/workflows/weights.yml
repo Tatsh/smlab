@@ -1,0 +1,45 @@
+jobs:
+  attach:
+    # Shared with every other release writer so the view-then-create check cannot race.
+    concurrency:
+      group: 'release-assets-${{ github.ref }}'
+      queue: 'max'
+    name: 'Attach Weights'
+    permissions:
+      contents: 'write'
+    runs-on: 'ubuntu-latest'
+    steps:
+      - uses: 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
+        with:
+          persist-credentials: false
+      - env:
+          GH_REPO: '${{ github.repository }}'
+          GH_TOKEN: '${{ github.token }}'
+        name: 'Attach weights to the draft release'
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 ||
+            gh release create "$GITHUB_REF_NAME" --draft --notes ''
+          mapfile -t tags < <(gh release list --exclude-drafts --json tagName --jq '.[].tagName')
+          mkdir _weights
+          # The tag itself is tried first because `smlab publish` attaches retrained weights there.
+          while read -r digest name; do
+            target="_weights/smlab-${GITHUB_REF_NAME#v}-${name}"
+            for tag in "$GITHUB_REF_NAME" "${tags[@]}"; do
+              if gh release download "$tag" --clobber --output "$target" \
+                --pattern "smlab-*-${name}" &&
+                sha256sum --check --status <<<"${digest}  ${target}"; then
+                echo "Using ${name} from ${tag}."
+                continue 2
+              fi
+            done
+            echo "::error::No release has a ${name} matching smlab/assets/weights.sha256."
+            exit 1
+          done <smlab/assets/weights.sha256
+          gh release upload "$GITHUB_REF_NAME" _weights/* --clobber
+        shell: 'bash'
+name: 'Weights'
+'on':
+  push:
+    tags:
+      - 'v*'
+permissions: {}

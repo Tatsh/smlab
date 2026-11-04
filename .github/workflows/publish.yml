@@ -20,7 +20,7 @@ jobs:
         name: 'Wait for workflows'
         run: |
           sha="$COMMIT_SHA"
-          required_workflows=('AppImage' 'Flatpak' 'PyInstaller' 'Snap')
+          required_workflows=('AppImage' 'Flatpak' 'PyInstaller' 'Snap' 'Weights')
           optional_workflows=('Prettier' 'QA' 'Spelling' 'Tests' 'markdownlint')
           process_workflow() {
             local workflow="$1" treat_missing="$2"

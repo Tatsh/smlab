@@ -9,6 +9,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [unreleased]
 
+### Fixed
+
+- Release 0.1.0 had no weights attached, and `generate` failed with an HTTP 404 error when
+  downloading them. Every release now has `smlab-<version>-chart.pt` and
+  `smlab-<version>-offset.pt` attached, including when the weights have not changed.
+
 ## [0.1.0] - 2026-10-28
 
 ### Added
