@@ -3,7 +3,7 @@ build-backend = "hatchling.build"
 requires = ["hatchling"]
 
 [dependency-groups]
-dev = ["commitizen>=4.19.2", "cz-path>=0.0.7", "mypy>=2.4.0", "ruff==0.17.1", "ty>=0.0.90"]
+dev = ["commitizen>=4.19.3", "cz-path>=0.0.7", "mypy>=2.4.1", "ruff==0.17.3", "ty>=0.0.94"]
 docs = [
   "autodoc-pydantic>=2.2.0",
   "doc8>=2.0.0",
@@ -20,7 +20,7 @@ tests = [
   "mock>=5.2.0",
   "pytest-cov>=7.1.0",
   "pytest-mock>=3.17.0",
-  "pytest>=9.1.1"
+  "pytest>=9.2.0"
 ]
 
 [project]
