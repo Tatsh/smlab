@@ -15,7 +15,7 @@ modules:
     buildsystem: 'simple'
     name: 'smlab'
     sources:
-      - tag: 'v0.1.0'
+      - tag: 'v0.1.1'
         type: 'git'
         url: 'https://github.com/Tatsh/smlab'
 runtime: 'org.freedesktop.Platform'

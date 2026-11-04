@@ -9,6 +9,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [unreleased]
 
+## [0.1.1] - 2026-11-04
+
 ### Fixed
 
 - Release 0.1.0 had no weights attached, and `generate` failed with an HTTP 404 error when
@@ -43,6 +45,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 First version.
 
-[unreleased]: https://github.com/Tatsh/smlab/compare/v0.1.0...HEAD
+[unreleased]: https://github.com/Tatsh/smlab/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/Tatsh/smlab/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Tatsh/smlab/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/Tatsh/smlab/releases/tag/v0.0.1

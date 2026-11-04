@@ -23,7 +23,7 @@ parts:
     python-packages:
       - '.'
     source: 'https://github.com/Tatsh/smlab.git'
-    source-tag: 'v0.1.0'
+    source-tag: 'v0.1.1'
     stage-packages: []
 platforms:
   amd64:
@@ -33,5 +33,5 @@ platforms:
 source-code: 'https://github.com/Tatsh/smlab'
 summary: 'Generate StepMania dance-single charts from audio using machine learning.'
 title: 'smlab'
-version: '0.1.0'
+version: '0.1.1'
 website: 'https://tatsh.github.io/smlab/'
