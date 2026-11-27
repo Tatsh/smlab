@@ -400,7 +400,7 @@ class OffsetModel(nn.Module):
         self.stack = nn.Sequential(*layers)
 
     @override
-    def forward(  # ty: ignore[invalid-mutable-override]
+    def forward(
         self,
         profile: torch.Tensor,
     ) -> torch.Tensor:

@@ -129,7 +129,7 @@ class FiLMConditioner(nn.Module):
         """Channel width each block expects."""
 
     @override
-    def forward(  # ty: ignore[invalid-mutable-override]
+    def forward(
         self,
         difficulty: torch.Tensor,
         meter: torch.Tensor,
@@ -205,7 +205,7 @@ class _ConvBlock(nn.Module):
         self.norm = nn.GroupNorm(8, channels)
 
     @override
-    def forward(  # ty: ignore[invalid-mutable-override]
+    def forward(
         self,
         inputs: torch.Tensor,
         modulation: torch.Tensor,
@@ -243,7 +243,7 @@ class _AttentionBlock(nn.Module):
         )
 
     @override
-    def forward(  # ty: ignore[invalid-mutable-override]
+    def forward(
         self, inputs: torch.Tensor, modulation: torch.Tensor, mask: torch.Tensor | None
     ) -> torch.Tensor:
         """
@@ -325,7 +325,7 @@ class AudioEncoder(nn.Module):
         self.output_norm = nn.LayerNorm(settings.model_dimension)
 
     @override
-    def forward(  # ty: ignore[invalid-mutable-override]
+    def forward(
         self,
         features: torch.Tensor,
         difficulty: torch.Tensor,
