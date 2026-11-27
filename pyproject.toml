@@ -3,7 +3,7 @@ build-backend = "hatchling.build"
 requires = ["hatchling"]
 
 [dependency-groups]
-dev = ["commitizen>=4.19.3", "cz-path>=0.0.7", "mypy>=2.4.1", "ruff==0.17.5", "ty>=0.0.94"]
+dev = ["commitizen>=4.19.4", "cz-path>=0.0.7", "mypy>=2.4.1", "ruff==0.17.6", "ty>=0.0.107"]
 docs = [
   "autodoc-pydantic>=2.2.0",
   "doc8>=2.0.0",
@@ -12,7 +12,7 @@ docs = [
   "restructuredtext-lint>=2.0.2",
   "sphinx-click>=6.2.0",
   "sphinx-datatables>=1.0.0",
-  "sphinx-immaterial>=0.13.9",
+  "sphinx-immaterial>=0.13.12",
   "sphinx>=9.2.0; python_version >= \"3.13\""
 ]
 tests = [
@@ -40,7 +40,7 @@ classifiers = [
 ]
 dependencies = [
   "bascom>=0.2.0",
-  "click>=8.5.0",
+  "click>=8.5.1",
   "typing-extensions>=4.16.0",
   "librosa>=1.0.0",
   "mutagen>=1.48.1",
